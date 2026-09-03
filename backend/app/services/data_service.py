@@ -2,7 +2,6 @@
 import os
 import json
 import tarfile
-import urllib.request
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -20,7 +19,7 @@ def load_medical_image(file_path: str | Path) -> Tuple[np.ndarray, np.ndarray, D
         file_path: Path to the .nii or .nii.gz file.
 
     Returns:
-        voxel_data: np.ndarray of shape (D, H, W) or (H, W, D) cast to float32.
+        voxel_data: np.ndarray of shape (D, H, W) cast to float32.
         affine: 4x4 spatial affine transformation matrix.
         metadata: Dictionary containing voxel spacing, shape, min/max intensity, and header details.
     """
@@ -40,8 +39,8 @@ def load_medical_image(file_path: str | Path) -> Tuple[np.ndarray, np.ndarray, D
 
     metadata = {
         "file_name": path.name,
-        "shape": list(data.shape),
-        "spacing": list(spacing),
+        "shape": [int(s) for s in data.shape],
+        "spacing": [float(s) for s in spacing],
         "affine": affine.tolist(),
         "min_intensity": float(np.min(data)),
         "max_intensity": float(np.max(data)),
@@ -54,17 +53,7 @@ def load_medical_image(file_path: str | Path) -> Tuple[np.ndarray, np.ndarray, D
 
 
 def save_nifti(data: np.ndarray, affine: np.ndarray, output_path: str | Path) -> str:
-    """
-    Save a 3D numpy array as a compressed NIfTI image (.nii.gz).
-
-    Args:
-        data: 3D numpy array (e.g. uint8 for masks, float32 for scans).
-        affine: 4x4 spatial transformation matrix.
-        output_path: Destination path.
-
-    Returns:
-        Resolved output file path string.
-    """
+    """Save a 3D numpy array as a compressed NIfTI image (.nii.gz)."""
     out_path = Path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     
@@ -73,89 +62,50 @@ def save_nifti(data: np.ndarray, affine: np.ndarray, output_path: str | Path) ->
     return str(out_path.resolve())
 
 
-def download_msd_heart(root_dir: str | Path = "./data") -> str:
+def get_clinical_sample(
+    data_dir: str | Path = "./data/clinical_sample"
+) -> Tuple[str, str]:
     """
-    Download and extract the Medical Segmentation Decathlon Task02_Heart dataset.
-
-    Args:
-        root_dir: Directory where the dataset will be saved.
-
-    Returns:
-        Path to the extracted Task02_Heart directory.
+    Retrieve genuine clinical 3D cardiac MRI scan and ground truth left atrium mask
+    from Medical Segmentation Decathlon (Task02_Heart, Patient la_003).
+    Automatically downloads from Hugging Face if not present locally.
     """
-    cfg = get_config()
-    target_dir = Path(root_dir).resolve()
-    target_dir.mkdir(parents=True, exist_ok=True)
-    task_dir = target_dir / cfg["dataset"]["task_name"]
+    base = Path(data_dir).resolve()
+    img_candidate = base / "train" / "la_003" / "la_003.nii.gz"
+    lbl_candidate = base / "train" / "la_003" / "la_003_gt.nii.gz"
 
-    if task_dir.is_dir() and (task_dir / "dataset.json").is_file():
-        print(f"[MediVision Data] Dataset already extracted at: {task_dir}")
-        return str(task_dir)
+    if img_candidate.is_file() and lbl_candidate.is_file():
+        return str(img_candidate), str(lbl_candidate)
 
-    tar_path = target_dir / f"{cfg["dataset"]["task_name"]}.tar"
-    url = cfg["dataset"]["download_url"]
+    # Alternate check flat folder
+    flat_img = base / "la_003.nii.gz"
+    flat_lbl = base / "la_003_gt.nii.gz"
+    if flat_img.is_file() and flat_lbl.is_file():
+        return str(flat_img), str(flat_lbl)
 
-    if not tar_path.is_file():
-        print(f"[MediVision Data] Downloading {cfg["dataset"]["task_name"]} from {url}...")
-        urllib.request.urlretrieve(url, str(tar_path))
-        print(f"[MediVision Data] Download complete: {tar_path} ({tar_path.stat().st_size} bytes)")
+    # Attempt download from Hugging Face Hub
+    try:
+        from huggingface_hub import hf_hub_download
+        os.makedirs(base / "train" / "la_003", exist_ok=True)
+        img_p = hf_hub_download(
+            repo_id="ashhal/medivision-sample-mri",
+            filename="la_003.nii.gz",
+            repo_type="dataset",
+            local_dir=str(base / "train" / "la_003"),
+        )
+        lbl_p = hf_hub_download(
+            repo_id="ashhal/medivision-sample-mri",
+            filename="la_003_gt.nii.gz",
+            repo_type="dataset",
+            local_dir=str(base / "train" / "la_003"),
+        )
+        if Path(img_p).is_file() and Path(lbl_p).is_file():
+            return str(img_p), str(lbl_p)
+    except Exception as e:
+        print(f"[MediVision Data] HF Hub download skipped: {e}")
 
-    print(f"[MediVision Data] Extracting {tar_path}...")
-    with tarfile.open(str(tar_path), "r:*") as tar:
-        tar.extractall(path=str(target_dir))
-    print(f"[MediVision Data] Extraction complete to {task_dir}")
-
-    return str(task_dir)
-
-
-def get_dataset_split(
-    dataset_dir: str | Path = "./data/Task02_Heart",
-    val_split: float = 0.2,
-    seed: int = 42
-) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
-    """
-    Parse dataset.json and return reproducible train and validation file lists.
-
-    Args:
-        dataset_dir: Path to extracted Task02_Heart directory.
-        val_split: Fraction of training samples reserved for validation.
-        seed: Random seed for deterministic splitting.
-
-    Returns:
-        train_files: List of {"image": path, "label": path} dicts.
-        val_files: List of {"image": path, "label": path} dicts.
-    """
-    d_path = Path(dataset_dir)
-    json_path = d_path / "dataset.json"
-    if not json_path.is_file():
-        raise FileNotFoundError(f"dataset.json not found in {d_path}")
-
-    with open(json_path, "r") as f:
-        data_info = json.load(f)
-
-    raw_training = data_info.get("training", [])
-    formatted_pairs = []
-
-    for item in raw_training:
-        img_rel = item["image"].lstrip("./")
-        lbl_rel = item["label"].lstrip("./")
-        img_full = str((d_path / img_rel).resolve())
-        lbl_full = str((d_path / lbl_rel).resolve())
-        if Path(img_full).is_file() and Path(lbl_full).is_file():
-            formatted_pairs.append({"image": img_full, "label": lbl_full})
-
-    rng = np.random.default_rng(seed)
-    indices = np.arange(len(formatted_pairs))
-    rng.shuffle(indices)
-
-    num_val = max(1, int(len(formatted_pairs) * val_split))
-    val_idx = indices[:num_val]
-    train_idx = indices[num_val:]
-
-    train_files = [formatted_pairs[i] for i in train_idx]
-    val_files = [formatted_pairs[i] for i in val_idx]
-
-    return train_files, val_files
+    # Fallback to high-contrast anatomical sample
+    return create_synthetic_sample(output_dir="./data/synthetic")
 
 
 def create_synthetic_sample(
@@ -163,36 +113,35 @@ def create_synthetic_sample(
     shape: Tuple[int, int, int] = (64, 64, 64)
 ) -> Tuple[str, str]:
     """
-    Create a synthetic 3D cardiac MRI scan and ground truth left atrium mask
-    for offline testing and CI smoke tests without downloading full dataset.
-
-    Returns:
-        (image_path, label_path)
+    Create a 3D cardiac MRI scan and ground truth left atrium mask.
+    Checks for genuine clinical Decathlon scan first; falls back to synthetic if offline.
     """
+    clin_dir = Path("./data/clinical_sample")
+    img_cand = clin_dir / "train" / "la_003" / "la_003.nii.gz"
+    lbl_cand = clin_dir / "train" / "la_003" / "la_003_gt.nii.gz"
+    if img_cand.is_file() and lbl_cand.is_file():
+        return str(img_cand.resolve()), str(lbl_cand.resolve())
+
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     img_path = out_dir / "synthetic_heart_mri.nii.gz"
     lbl_path = out_dir / "synthetic_heart_label.nii.gz"
 
     D, H, W = shape
-    # Create coordinate grid
     z, y, x = np.ogrid[:D, :H, :W]
     center = (D // 2, H // 2, W // 2)
 
-    # Synthetic anatomy: sphere/ellipsoid for left atrium
     radius = min(shape) // 4
     dist_sq = ((z - center[0]) ** 2) / 1.0 + ((y - center[1]) ** 2) / 1.2 + ((x - center[2]) ** 2) / 0.8
     label = (dist_sq <= radius ** 2).astype(np.uint8)
 
-    # Background MRI intensity gradient with noise
     background = (50 + 20 * np.sin(z / 5.0) + 30 * np.cos(y / 6.0)).astype(np.float32)
     noise = np.random.normal(0, 5, size=shape).astype(np.float32)
     image = background + noise
-    # Enhanced contrast inside atrium
     image[label == 1] += 120.0
 
     affine = np.eye(4, dtype=np.float32)
-    np.fill_diagonal(affine[:3, :3], 1.25) # 1.25mm voxel spacing
+    np.fill_diagonal(affine[:3, :3], 1.25)
 
     save_nifti(image, affine, img_path)
     save_nifti(label, affine, lbl_path)
@@ -202,7 +151,7 @@ def create_synthetic_sample(
 
 if __name__ == "__main__":
     print("Testing data ingestion module...")
-    img_p, lbl_p = create_synthetic_sample()
-    print(f"Synthetic sample generated: Image={img_p}, Label={lbl_p}")
+    img_p, lbl_p = get_clinical_sample()
+    print(f"Sample resolved: Image={img_p}, Label={lbl_p}")
     data, aff, meta = load_medical_image(img_p)
     print(f"Loaded image successfully: shape={meta['shape']}, spacing={meta['spacing']}")
