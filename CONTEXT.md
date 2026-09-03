@@ -9,6 +9,7 @@ MediVision is a production-grade 3D medical image segmentation, quantitative ana
 - **Live Deployment:** Streamlit Full-Stack Application is live and accessible at **[https://medivision-a.streamlit.app/](https://medivision-a.streamlit.app/)**.
 - **Automated Verification:** All 23 FastAPI REST backend endpoints and health check verified passing (`23 / 23 Passed, 100% OK`).
 - **Bug Resolution (2026-09-03):**
+  - Resolved `AttributeError: st.session_state has no attribute "affine"` in `streamlit_app.py` and `app/main.py` by adding `affine` to default session state initialization and utilizing `getattr()` fallback.
   - Resolved `AttributeError: 'float' object has no attribute 'get'` in `streamlit_app.py` and `report_service.py` by packaging `seg_meta` into a typed dictionary (`volume_cm3`, `voxel_count`, `surface_area_cm2`, `sphericity_index`).
   - Resolved `KeyError: 'hd95_mm'` by adding metric key aliases (`hd95_mm`, `asd_mm`) in `metrics_service.py` and implementing defensive `.get()` getters with defaults in UI modules.
   - Resolved registration dictionary attribute lookups in Streamlit Module 5.

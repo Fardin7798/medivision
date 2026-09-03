@@ -76,8 +76,11 @@ if "volume" not in st.session_state:
     st.session_state.volume = vol_data
     st.session_state.ground_truth = mask_data
     st.session_state.pred_mask = mask_data
+    st.session_state.affine = np.eye(4)
     st.session_state.spacing = (1.0, 1.0, 1.0)
-    st.session_state.patient_id = "MED-2026-CLOUD-01" 
+    st.session_state.patient_id = "MED-2026-CLOUD-01"
+elif "affine" not in st.session_state:
+    st.session_state.affine = np.eye(4)
 
 # Medical Safety Disclaimer
 st.markdown("""
@@ -185,9 +188,10 @@ elif module == "2. 3D U-Net AI Segmentation":
         with st.spinner("Executing 3D volumetric AI inference..."):
             if "TotalSegmentator" in engine_choice:
                 target_key = organ_map.get(organ_choice, "whole_heart")
+                aff = getattr(st.session_state, "affine", np.eye(4))
                 pred_mask, seg_meta = run_totalsegmentator_inference(
                     volume_or_path=st.session_state.volume,
-                    affine=st.session_state.affine,
+                    affine=aff,
                     task="total_mr",
                     target_structure=target_key,
                     device="cpu",
