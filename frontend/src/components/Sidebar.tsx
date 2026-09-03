@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { href: "/multichannel", label: "Multichannel Features", icon: Layers },
   { href: "/report", label: "Radiologist Report", icon: FileText },
   { href: "/benchmark", label: "Benchmark Suite", icon: Gauge },
+  { href: "/safety", label: "Safety & QA Audit", icon: ShieldCheck },
 ];
 
 export default function Sidebar() {

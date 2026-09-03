@@ -126,6 +126,13 @@ python3 -m backend.app.benchmark --cases 2
 ```
 **✅ RUN on 2026-09-03, real result:** Multi-case benchmark completed with granular stage timings, mean throughput, per-case Dice metrics, and JSON summary statistics.
 
+### 6.11 Clinical Safety Validation & Quality Assurance Smoke Test
+```bash
+# Test pre-flight scan safety auditing, NaN sanitization, and adversarial edge cases
+python3 -m backend.app.services.safety_service
+```
+**✅ RUN on 2026-09-03, real result:** Normal scan approved (100% score), corrupted volume sanitized with NaN detection (70% score), zero-voxel empty mask safely rejected.
+
 ## 7. External Dependency Reachability Test
 
 ### 7.1 MSD Task02_Heart S3 Bucket
