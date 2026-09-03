@@ -97,7 +97,9 @@ def compute_segmentation_metrics(
         "specificity": round(float(specificity), 4),
         "volumetric_similarity": round(float(vol_similarity), 4),
         "hausdorff_distance_95_mm": round(float(hd95), 3),
+        "hd95_mm": round(float(hd95), 3),
         "average_surface_distance_mm": round(float(asd), 3),
+        "asd_mm": round(float(asd), 3),
         "confusion_matrix": {
             "true_positive": tp,
             "false_positive": fp,

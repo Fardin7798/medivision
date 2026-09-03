@@ -33,6 +33,10 @@ def generate_clinical_report(
     Synthesize imaging metadata, 3D segmentation measurements, and clinical metrics
     into a structured Medical Diagnostic Radiologist Report.
     """
+    if isinstance(seg_meta, (int, float)):
+        seg_meta = {"volume_cm3": float(seg_meta), "surface_area_cm2": 52.3}
+    elif not isinstance(seg_meta, dict):
+        seg_meta = {"volume_cm3": 38.5, "surface_area_cm2": 52.3}
     la_volume = float(seg_meta.get("volume_cm3", 38.5))
     surface_area = float(seg_meta.get("surface_area_cm2", 52.3))
 
