@@ -1,12 +1,16 @@
-# MediVision Backend Dependencies
+# MediVision Production & Cloud Dependencies
 torch==2.14.0
 monai==1.6.0
 SimpleITK==2.5.6
 nibabel==5.4.2
 scikit-image==0.26.0
+scipy>=1.13.0
 huggingface_hub==1.29.0
 pyyaml==6.0.2
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 python-multipart>=0.0.9
 pydantic>=2.8.0
+streamlit==1.40.0
+matplotlib>=3.8.0
+supabase>=2.30.0
