@@ -61,3 +61,18 @@ reconstruction:
   step_size: 1
   smooth_iterations: 15
   smooth_relaxation: 0.1
+
+engines:
+  default: "totalsegmentator"
+  totalsegmentator:
+    default_task: "total_mr"
+    fast: true
+    supported_structures:
+      - "heart"
+      - "atrium_left"
+      - "ventricle_left"
+      - "atrium_right"
+      - "ventricle_right"
+      - "myocardium"
+      - "aorta"
+      - "pulmonary_artery"

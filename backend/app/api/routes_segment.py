@@ -16,17 +16,27 @@ router = APIRouter(prefix="/api", tags=["Segmentation"])
 
 @router.post("/segment")
 def segment_scan(payload: dict = Body(...)):
-    """Run 3D MONAI U-Net segmentation on preprocessed scan."""
+    """Run 3D AI segmentation (TotalSegmentator Pretrained Universal Engine or MONAI 3D Residual U-Net)."""
     file_id = payload.get("file_id")
     if not file_id or file_id not in FILE_REGISTRY:
         raise HTTPException(status_code=404, detail="Valid file_id required.")
+
+    engine = payload.get("engine", "totalsegmentator")
+    target_structure = payload.get("target_structure", "all")
+    task = payload.get("task", "total_mr")
 
     input_path = FILE_REGISTRY[file_id]["path"]
     out_dir = Path("./outputs")
     out_dir.mkdir(parents=True, exist_ok=True)
     mask_path = out_dir / f"{file_id}_mask.nii.gz"
 
-    mask, aff, meta = segment_volume_file(input_path, output_mask_file=mask_path)
+    mask, aff, meta = segment_volume_file(
+        input_path,
+        output_mask_file=mask_path,
+        engine=engine,
+        target_structure=target_structure,
+        task=task,
+    )
 
     mask_id = f"{file_id}_mask"
     FILE_REGISTRY[mask_id] = {
@@ -35,15 +45,20 @@ def segment_scan(payload: dict = Body(...)):
         "shape": meta["mask_shape"],
         "voxels_segmented": meta["voxels_segmented"],
         "volume_cm3": meta["volume_cm3"],
+        "engine": meta.get("engine", engine),
+        "structures": meta.get("structures", {}),
     }
 
     return {
         "mask_id": mask_id,
         "input_file_id": file_id,
+        "engine_used": meta.get("engine", engine),
+        "target_structure": target_structure,
         "mask_shape": meta["mask_shape"],
         "voxels_segmented": meta["voxels_segmented"],
         "volume_cm3": meta["volume_cm3"],
-        "message": "3D U-Net segmentation executed successfully."
+        "structures": meta.get("structures", {}),
+        "message": f"3D {meta.get('engine', engine)} segmentation executed successfully."
     }
 
 @router.get("/slice/overlay")

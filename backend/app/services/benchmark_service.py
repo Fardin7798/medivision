@@ -13,7 +13,7 @@ from backend.app.services.reconstruct_service import generate_surface_mesh, writ
 from backend.app.services.report_service import generate_clinical_report
 
 
-def run_single_case_benchmark(case_idx: int, output_dir: Path) -> Dict[str, Any]:
+def run_single_case_benchmark(case_idx: int, output_dir: Path, engine: str = "monai_unet") -> Dict[str, Any]:
     """Run full end-to-end MediVision pipeline on a single test scan and record granular stage timings."""
     case_dir = output_dir / f"case_{case_idx:02d}"
     case_dir.mkdir(parents=True, exist_ok=True)
@@ -29,14 +29,13 @@ def run_single_case_benchmark(case_idx: int, output_dir: Path) -> Dict[str, Any]
     # Stage 2: Preprocessing & Resampling
     t0 = time.perf_counter()
     prep_path = case_dir / "prep.nii.gz"
-    prep_path = case_dir / "prep.nii.gz"
     prep_data, prep_affine, prep_meta = preprocess_volume_file(img_path, output_file=prep_path)
     timings["preprocessing_sec"] = round(time.perf_counter() - t0, 4)
 
-    # Stage 3: 3D U-Net Segmentation Inference
+    # Stage 3: AI Segmentation Inference (Dual-Engine)
     t0 = time.perf_counter()
     mask_path = case_dir / "mask.nii.gz"
-    pred_mask, _, seg_meta = segment_volume_file(prep_path, output_mask_file=mask_path, device="cpu")
+    pred_mask, _, seg_meta = segment_volume_file(prep_path, output_mask_file=mask_path, engine=engine, device="cpu")
     volume_cm3 = seg_meta.get("volume_cm3", 38.5)
     timings["segmentation_sec"] = round(time.perf_counter() - t0, 4)
 
