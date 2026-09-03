@@ -56,16 +56,28 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+def generate_in_memory_sample(shape=(64, 64, 64)):
+    """Generate pure in-memory 3D cardiac volume and ground truth mask without disk dependency."""
+    D, H, W = shape
+    z, y, x = np.ogrid[:D, :H, :W]
+    center = (D // 2, H // 2, W // 2)
+    radius = min(shape) // 4
+    dist_sq = ((z - center[0]) ** 2) / 1.0 + ((y - center[1]) ** 2) / 1.2 + ((x - center[2]) ** 2) / 0.8
+    label = (dist_sq <= radius ** 2).astype(np.uint8)
+    background = (50 + 20 * np.sin(z / 5.0) + 30 * np.cos(y / 6.0)).astype(np.float32)
+    noise = np.random.normal(0, 5, size=shape).astype(np.float32)
+    image = background + noise
+    image[label == 1] += 120.0
+    return image, label
+
 # Session State Initialization
 if "volume" not in st.session_state:
-    vol_path, mask_path = create_synthetic_sample(shape=(64, 64, 64))
-    vol_data, _, _ = load_medical_image(vol_path)
-    mask_data, _, _ = load_medical_image(mask_path)
+    vol_data, mask_data = generate_in_memory_sample()
     st.session_state.volume = vol_data
     st.session_state.ground_truth = mask_data
     st.session_state.pred_mask = mask_data
     st.session_state.spacing = (1.0, 1.0, 1.0)
-    st.session_state.patient_id = "MED-2026-CLOUD-01"
+    st.session_state.patient_id = "MED-2026-CLOUD-01" 
 
 # Medical Safety Disclaimer
 st.markdown("""
