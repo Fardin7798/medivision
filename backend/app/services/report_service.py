@@ -48,8 +48,10 @@ def generate_clinical_report(
     lae_grade, lae_color, lae_desc = classify_left_atrial_enlargement(la_volume)
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
-    dice_score = eval_metrics.get("dice_coefficient", 0.9167) if eval_metrics else 0.9167
-    hd95 = eval_metrics.get("hausdorff_distance_95_mm", 2.0) if eval_metrics else 2.0
+    if not isinstance(eval_metrics, dict):
+        eval_metrics = {}
+    dice_score = eval_metrics.get("dice_coefficient", 0.9167)
+    hd95 = eval_metrics.get("hausdorff_distance_95_mm", 2.0)
 
     report = {
         "report_id": f"REP-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}",

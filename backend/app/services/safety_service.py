@@ -93,6 +93,13 @@ def validate_scan_safety(
         critical_errors.append(f"Volume dimensions {shape} are critically small for 3D U-Net receptive field.")
 
     # 2. Voxel Spacing Checks
+    spacing_arr = np.array(spacing, dtype=float).flatten()
+    if len(spacing_arr) >= 3:
+        spacing_tuple = (float(spacing_arr[0]), float(spacing_arr[1]), float(spacing_arr[2]))
+    else:
+        spacing_tuple = (1.0, 1.0, 1.0)
+    spacing = spacing_tuple
+
     if any(s <= 0.0 for s in spacing):
         critical_errors.append(f"Invalid non-positive voxel spacing: {spacing}.")
     elif max(spacing) / min(spacing) > 5.0:

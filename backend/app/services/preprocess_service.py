@@ -46,7 +46,7 @@ def resample_to_spacing(
         new_spacing: Final spacing tuple.
     """
     zoom_factors = [
-        current / target
+        float(current) / float(target)
         for current, target in zip(current_spacing, target_spacing)
     ]
     order = 0 if is_label else 3
