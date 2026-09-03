@@ -82,7 +82,7 @@
 - [ ] Implement 3D PyVista interactive rendering via `stpyvista` in `src/viz.py`.
 
 ### Phase 10 — Multichannel Experiment & VLM Module
-- [ ] Implement 3D Sobel, Laplacian, and Gabor feature extraction in `src/spectral.py`.
+- [x] Implement 3D Sobel, Laplacian, and Gabor feature extraction in `backend/app/services/spectral_service.py`.
 - [ ] Train 4-channel U-Net and quantitatively benchmark Dice score vs. 1-channel baseline.
 - [ ] Implement zero-cost clinical summary generator in `src/vlm.py`.
 

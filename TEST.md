@@ -98,6 +98,13 @@ python3 -m backend.app.services.register_service
 ```
 **✅ RUN on 2026-09-03, real result:** Registration converged in 19 iterations with final Mutual Information metric `-2.05441`, recovering translation shifts (X: -3.75mm, Y: 2.72mm, Z: 2.27mm) and generating registered volume.
 
+### 6.7 Multichannel & Spectral Feature Extraction Smoke Test
+```bash
+# Test extraction of 4-channel spectral volume (Intensity, Sobel, Laplacian, Gabor)
+python3 -m backend.app.services.spectral_service
+```
+**✅ RUN on 2026-09-03, real result:** 4-Channel spectral volume (4, 48, 48, 48) generated and per-channel z-score normalized to exact zero-mean and unit-variance.
+
 ## 7. External Dependency Reachability Test
 
 ### 7.1 MSD Task02_Heart S3 Bucket
