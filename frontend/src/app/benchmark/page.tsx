@@ -1,4 +1,5 @@
 "use client";
+import { API_BASE_URL } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { 
   Gauge, 
@@ -74,7 +75,7 @@ export default function BenchmarkPage() {
   useEffect(() => {
     async function init() {
       try {
-        const res = await fetch("http://localhost:8000/api/benchmark/latest");
+        const res = await fetch(`${API_BASE_URL}/api/benchmark/latest`);
         if (res.ok) {
           const data = await res.json();
           setBenchmark(data.benchmark_summary);
@@ -89,7 +90,7 @@ export default function BenchmarkPage() {
   const handleRunBenchmark = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/benchmark/run", {
+      const res = await fetch(`${API_BASE_URL}/api/benchmark/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ num_cases: caseCount }),

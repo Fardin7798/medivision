@@ -11,6 +11,7 @@ import {
   Zap
 } from "lucide-react";
 import { generateSyntheticSample, preprocessScan } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api";
 
 const CHANNELS = [
   { index: 0, name: "Channel 0: Raw MRI Intensity", desc: "Normalized voxel intensity baseline", colormap: "Grayscale", badge: "Baseline" },
@@ -43,7 +44,7 @@ export default function MultichannelPage() {
   const handleExtract = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/spectral/extract", {
+      const res = await fetch(`${API_BASE_URL}/api/spectral/extract`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_id: fileId }),
@@ -134,7 +135,7 @@ export default function MultichannelPage() {
       {/* 4-Channel Visual Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1.25rem" }}>
         {CHANNELS.map((ch) => {
-          const channelUrl = `http://localhost:8000/api/slice/channel?file_id=${fileId}&channel=${ch.index}&axis=${axis}&index=${index}`;
+          const channelUrl = `${API_BASE_URL}/api/slice/channel?file_id=${fileId}&channel=${ch.index}&axis=${axis}&index=${index}`;
           return (
             <div key={ch.index} className="glass-panel" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>

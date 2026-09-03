@@ -14,6 +14,7 @@ import {
   ClipboardList
 } from "lucide-react";
 import { generateSyntheticSample, preprocessScan } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api";
 
 interface ReportData {
   report_id: string;
@@ -62,7 +63,7 @@ export default function ReportPage() {
         const sample = await generateSyntheticSample();
         const prep = await preprocessScan(sample.file_id);
         
-        const res = await fetch("http://localhost:8000/api/report/generate", {
+        const res = await fetch(`${API_BASE_URL}/api/report/generate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -88,7 +89,7 @@ export default function ReportPage() {
 
   const handleDownloadMarkdown = () => {
     if (!report) return;
-    window.open(`http://localhost:8000/api/report/markdown?report_id=${report.report_id}`, "_blank");
+    window.open(`${API_BASE_URL}/api/report/markdown?report_id=${report.report_id}`, "_blank");
   };
 
   return (

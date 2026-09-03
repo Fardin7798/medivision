@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Box, Download, CheckCircle2, Play, Sparkles, Layers, Activity } from "lucide-react";
 import Viewport3D from "@/components/Viewport3D";
 import { generateSyntheticSample, preprocessScan } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api";
 
 interface MeshResult {
   mesh_id: string;
@@ -30,7 +31,7 @@ export default function ReconstructPage() {
         setPrepId(prep.preprocessed_file_id);
         
         // Trigger segmentation
-        const segRes = await fetch("http://localhost:8000/api/segment", {
+        const segRes = await fetch(`${API_BASE_URL}/api/segment`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ file_id: prep.preprocessed_file_id }),
@@ -50,7 +51,7 @@ export default function ReconstructPage() {
     if (!maskId) return;
     setReconLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/reconstruct", {
+      const res = await fetch(`${API_BASE_URL}/api/reconstruct`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mask_id: maskId }),

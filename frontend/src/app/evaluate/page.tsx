@@ -12,6 +12,7 @@ import {
   FileCheck
 } from "lucide-react";
 import { generateSyntheticSample, preprocessScan } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api";
 
 interface MetricsData {
   dice_coefficient: number;
@@ -49,7 +50,7 @@ export default function EvaluatePage() {
         setPrepId(prep.preprocessed_file_id);
         
         // Trigger segmentation
-        const segRes = await fetch("http://localhost:8000/api/segment", {
+        const segRes = await fetch(`${API_BASE_URL}/api/segment`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ file_id: prep.preprocessed_file_id }),
@@ -69,7 +70,7 @@ export default function EvaluatePage() {
     if (!maskId) return;
     setEvalLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/evaluate", {
+      const res = await fetch(`${API_BASE_URL}/api/evaluate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pred_mask_id: maskId }),

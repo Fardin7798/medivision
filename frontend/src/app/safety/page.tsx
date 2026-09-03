@@ -14,6 +14,7 @@ import {
   Lock
 } from "lucide-react";
 import { generateSyntheticSample } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api";
 
 interface QualityMetrics {
   snr_linear: number;
@@ -55,7 +56,7 @@ export default function SafetyPage() {
       setLoading(true);
       try {
         const sample = await generateSyntheticSample();
-        const res = await fetch("http://localhost:8000/api/safety/validate-scan", {
+        const res = await fetch(`${API_BASE_URL}/api/safety/validate-scan`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ file_id: sample.file_id }),
@@ -74,7 +75,7 @@ export default function SafetyPage() {
   const handleRunStressTest = async () => {
     setStressLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/safety/stress-test", {
+      const res = await fetch(`${API_BASE_URL}/api/safety/stress-test`, {
         method: "POST",
       });
       const data = await res.json();

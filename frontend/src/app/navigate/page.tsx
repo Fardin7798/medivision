@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Viewport3D from "@/components/Viewport3D";
 import { generateSyntheticSample, preprocessScan } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api";
 
 interface ProbeInfo {
   voxel_indices: { z: number; y: number; x: number };
@@ -41,7 +42,7 @@ export default function NavigatePage() {
         setFileId(prep.preprocessed_file_id);
 
         // Fetch segmentation mask
-        const segRes = await fetch("http://localhost:8000/api/segment", {
+        const segRes = await fetch(`${API_BASE_URL}/api/segment`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ file_id: prep.preprocessed_file_id }),
@@ -62,7 +63,7 @@ export default function NavigatePage() {
     async function updateProbe() {
       try {
         const maskParam = maskId ? `&mask_id=${maskId}` : "";
-        const res = await fetch(`http://localhost:8000/api/probe?file_id=${fileId}${maskParam}&z=${z}&y=${y}&x=${x}`);
+        const res = await fetch(`${API_BASE_URL}/api/probe?file_id=${fileId}${maskParam}&z=${z}&y=${y}&x=${x}`);
         if (res.ok) {
           const data = await res.json();
           setProbe(data);
@@ -76,9 +77,9 @@ export default function NavigatePage() {
 
   const getSliceUrl = (axis: "axial" | "coronal" | "sagittal", idx: number) => {
     if (overlay && maskId) {
-      return `http://localhost:8000/api/slice/overlay?file_id=${fileId}&mask_id=${maskId}&axis=${axis}&index=${idx}`;
+      return `${API_BASE_URL}/api/slice/overlay?file_id=${fileId}&mask_id=${maskId}&axis=${axis}&index=${idx}`;
     }
-    return `http://localhost:8000/api/slice?file_id=${fileId}&axis=${axis}&index=${idx}`;
+    return `${API_BASE_URL}/api/slice?file_id=${fileId}&axis=${axis}&index=${idx}`;
   };
 
   return (

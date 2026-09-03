@@ -4,6 +4,7 @@ import { BrainCircuit, Play, CheckCircle2, Activity, BarChart2, Layers } from "l
 import SliceViewer from "@/components/SliceViewer";
 import Viewport3D from "@/components/Viewport3D";
 import { generateSyntheticSample, preprocessScan, getSliceImageUrl } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function SegmentPage() {
   const [fileId, setFileId] = useState<string>("");
@@ -35,7 +36,7 @@ export default function SegmentPage() {
     if (!prepId) return;
     setSegLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/segment", {
+      const res = await fetch(`${API_BASE_URL}/api/segment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_id: prepId }),

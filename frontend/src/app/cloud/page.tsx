@@ -1,4 +1,5 @@
 "use client";
+import { API_BASE_URL } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { 
   Database, 
@@ -45,7 +46,7 @@ export default function CloudPage() {
   const fetchCloudRecords = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/cloud/history");
+      const res = await fetch(`${API_BASE_URL}/api/cloud/history`);
       if (res.ok) {
         const data = await res.json();
         setPatients(data.history || []);
@@ -64,7 +65,7 @@ export default function CloudPage() {
   const handleSyncCurrent = async () => {
     setSyncing(true);
     try {
-      const res = await fetch("http://localhost:8000/api/cloud/sync", {
+      const res = await fetch(`${API_BASE_URL}/api/cloud/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

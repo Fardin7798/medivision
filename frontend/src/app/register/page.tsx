@@ -1,4 +1,5 @@
 "use client";
+import { API_BASE_URL } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { 
   Crosshair, 
@@ -37,7 +38,7 @@ export default function RegisterPage() {
   useEffect(() => {
     async function init() {
       try {
-        const res = await fetch("http://localhost:8000/api/dataset/registration-pair");
+        const res = await fetch(`${API_BASE_URL}/api/dataset/registration-pair`);
         const data = await res.json();
         setFixedId(data.fixed_file_id);
         setMovingId(data.moving_file_id);
@@ -51,7 +52,7 @@ export default function RegisterPage() {
   const handleRunRegistration = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/register", {
+      const res = await fetch(`${API_BASE_URL}/api/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -70,7 +71,7 @@ export default function RegisterPage() {
     }
   };
 
-  const diffImageUrl = `http://localhost:8000/api/slice/registration-diff?fixed_file_id=${fixedId}&moving_file_id=${regResult ? regResult.registered_file_id : movingId}&axis=${axis}&index=${index}`;
+  const diffImageUrl = `${API_BASE_URL}/api/slice/registration-diff?fixed_file_id=${fixedId}&moving_file_id=${regResult ? regResult.registered_file_id : movingId}&axis=${axis}&index=${index}`;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.75rem", maxWidth: "1400px", margin: "0 auto" }}>
