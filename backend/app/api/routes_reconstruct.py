@@ -20,7 +20,12 @@ def reconstruct_surface(payload: dict = Body(...)):
     mask_path = FILE_REGISTRY[mask_id]["path"]
     mesh_prefix = f"mesh_{mask_id}"
 
-    mesh_meta = reconstruct_mask_file(mask_path, output_dir=OUTPUT_DIR, file_prefix=mesh_prefix)
+    try:
+        mesh_meta = reconstruct_mask_file(mask_path, output_dir=OUTPUT_DIR, file_prefix=mesh_prefix)
+    except ValueError as val_err:
+        raise HTTPException(status_code=400, detail=str(val_err))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"3D Reconstruction failure: {exc}")
 
     return {
         "status": "success",

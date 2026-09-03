@@ -1,159 +1,139 @@
 # Product Requirements Document (PRD)
 ## MediVision — 3D Medical Image AI Segmentation, Registration & Navigation System
 
-> **Status:** Stage 1 Specification Complete. Implementation details and live statuses are maintained in `docs/architecture.md`, `docs/tech-stack.md`, and `CONTEXT.md`.
+> Fill this in from the user's idea before writing any code. This is Step 1 of starting a new project — see `instructions.md`.
 
-> ⚠️ **CRITICAL MEDICAL SAFETY DISCLAIMER**
-> MediVision is an **educational and research prototype only**. It is **NOT** a certified medical device, diagnostic tool, or clinical surgical navigation system (no FDA 510(k), CE-IVD, or MDR certification). It must **never** be used for clinical decision-making, patient diagnosis, surgery planning, or live surgical guidance.
+> ⚠️ **MANDATORY MEDICAL SAFETY DISCLAIMER**
+> MediVision is a **research and educational prototype only**. It is **NOT** a certified clinical diagnostic system, medical device, or surgical navigation guidance system (no FDA 510(k), CE-IVD, or MDR certification). It must **never** be used for clinical decision-making, patient diagnosis, or real surgical care.
 
 ---
 
 ## 1. Overview
 
 ### 1.1 Purpose
-MediVision is an end-to-end, reproducible, open-source Python framework and interactive web/desktop application that processes 3D medical imaging scans (MRI/CT), performs automated anatomical segmentation using 3D deep learning (MONAI U-Net on MSD Task02_Heart), reconstructs anatomical structures into interactive 3D surface meshes (Marching Cubes + PyVista), executes rigid/affine multi-modal image registration (SimpleITK), and renders simulated surgical-navigation overlays accompanied by optional local Vision-Language Model (VLM) clinical summaries.
+MediVision is an end-to-end full-stack medical AI platform designed for volumetric anatomical segmentation, quantitative clinical metric evaluation, 3D interactive mesh reconstruction, multi-resolution spatial registration, and simulated surgical navigation. It provides researchers, biomedical engineers, and medical educators with a unified, browser-accessible environment optimized for single-vCPU / 2.7GB RAM cloud hosting (Streamlit Community Cloud).
 
 ### 1.2 Problem Statement
-Developing and experimenting with complete medical imaging AI workflows currently requires expensive proprietary clinical software suites (e.g., Mimics, 3D Slicer custom workstations) and fragmented developer tooling. Researchers, students, and ML engineers lack a lightweight, single-codebase pipeline that unifies volumetric preprocessing, deep learning segmentation, spectral multichannel feature experiments, 3D mesh rendering, and registration with an intuitive, zero-install browser interface.
+Clinical 3D imaging AI research currently relies on fragmented, expensive software suites or heavyweight GPU workstations. Existing open-source tools frequently crash on constrained cloud environments due to unoptimized 3D tensor allocations, full-body ensemble inference spikes, and slow mesh serializers. MediVision solves this by engineering a lightweight, CPU-optimized backend with targeted anatomical sub-model inference (`roi_subset`), vectorized binary mesh exporters, and real-time memory telemetry.
 
 ### 1.3 Goals
-- Deliver an automated 3D U-Net segmentation pipeline trained on public medical data (MSD Task02_Heart Left Atrium) achieving validation Dice coefficient > 0.70.
-- Quantitatively evaluate whether augmenting standard MRI volumes with derived multichannel features (Sobel 3D spatial gradients, Laplacian edge filters, Gabor texture energy) enhances segmentation boundaries.
-- Generate smoothed 3D surface meshes from volumetric binary masks and render them interactively inside a Streamlit web application with STL/OBJ export capabilities.
-- Implement rigid and affine 3D image registration using SimpleITK to align patient scans to canonical anatomical atlases or pre-operative reference scans.
-- Provide a simulated multi-planar surgical navigation visualization demonstrating real-time 2D cross-sectional slice tracking with 3D orientation markers.
-- Provide a modular, fully documented codebase formatted for research proposals and portfolio review.
+- Provide zero-shot 3D anatomical segmentation using a dual-engine architecture: TotalSegmentator with targeted organ selection (`roi_subset`) and MONAI 3D Residual U-Net (Hugging Face Hub weights).
+- Enforce strict Streamlit Community Cloud runtime compliance (peak memory < 1.8GB, well below the 2.7GB hard cap).
+- Implement standard 1.0mm isotropic spline resampling and intensity z-score normalization.
+- Compute quantitative clinical validation metrics (Dice Similarity Coefficient, IoU Jaccard Index, 95% Hausdorff Distance, Average Surface Distance, and Confusion Matrix).
+- Extract 3D polygonal surface meshes using Marching Cubes, compute surface area in $cm^2$, and provide 1-click ultra-fast Vectorized Binary STL CAD export (3D-printing ready) and Wavefront OBJ WebGL export.
+- Execute 2x multi-resolution rigid 6-DOF (Euler3D) and 12-DOF affine 3D image registration using SimpleITK with Mattes Mutual Information (converging in < 2 seconds on CPU).
+- Extract on-demand 4-channel spectral spatial features (3D Sobel gradients, Laplacian curvature, Gabor texture).
+- Generate structured AI Radiologist Diagnostic Reports with Left Atrial Enlargement (LAE) grading and printable Markdown formatting.
+- Implement clinical safety interceptors, anomaly volume detection, and synthetic noise stress testing.
+- Display real-time RAM usage telemetry in the UI sidebar (`RAM: XXX MB / 2700 MB`) with defensive memory cleanup.
+- Connect to live Supabase PostgreSQL cloud database for patient audit telemetry.
 
 ### 1.4 Non-Goals
-- Hardware integration with optical/electromagnetic surgical tracking systems (e.g., NDI Polaris).
-- Real-time intra-operative live imaging or low-latency video streaming.
-- Multi-user authentication, patient billing, or cloud-hosted electronic health record (EHR) integrations.
-- Replacing clinical radiologist interpretation or generating legally binding diagnostic reports.
+- Local or cloud-based model training loops (all training pipelines removed; system relies strictly on pretrained zero-shot inference).
+- Hardware integration with optical/electromagnetic surgical tracking hardware (e.g., NDI Polaris).
+- Real-time intra-operative live video streaming.
+- Legally binding clinical diagnosis or replacing licensed radiologist interpretation.
 
 ---
 
 ## 2. Target Users
-- **Biomedical Engineering & ML Researchers:** Prototyping novel volumetric segmentation, feature extraction, and registration algorithms.
-- **Medical Students & Educators:** Visualizing 3D anatomical structures, spatial orientations, and AI segmentation predictions interactively.
-- **Computer Vision & Healthcare AI Engineers:** Reviewing a clean, production-grade reference architecture for MONAI, SimpleITK, and PyVista integration.
+- **Biomedical & AI Researchers:** Prototyping volumetric deep learning, feature extraction, and registration algorithms.
+- **Medical Students & Educators:** Interactively exploring 3D anatomical structures, spatial orientations, and AI segmentation predictions in real-time.
+- **Healthcare AI Engineers:** Utilizing a clean, production-grade reference architecture for CPU-optimized MONAI, SimpleITK, Three.js, and Streamlit.
 
 ---
 
 ## 3. Key Features
 
-### 3.1 Medical Image Ingestion & Metadata Inspector
-Accepts volumetric NIfTI (`.nii`, `.nii.gz`), DICOM series, and 2D medical formats (PNG/TIFF). Extracts and displays voxel dimensions, field-of-view (FOV), affine coordinate transform, and intensity histograms.
+### 3.1 Volumetric Medical Ingestion & Synchronized MPR Slicer
+Supports loading 3D NIfTI (`.nii`, `.nii.gz`) and DICOM volumes with metadata extraction (voxel dimensions, spatial affine matrix, intensity statistics) and real-time synchronized Multi-Planar Reconstruction (MPR) scrubbing across Axial, Coronal, and Sagittal planes.
 
-### 3.2 Medical Image Preprocessing Pipeline
-Standardizes raw volumetric scans:
-- Isotropic voxel resampling to `(1.0, 1.0, 1.0) mm` spacing.
-- Intensity windowing / HU clipping (1st to 99th percentile contrast enhancement).
-- Spatial padding, center cropping, and zero-mean unit-variance normalization.
+### 3.2 Dual-Engine 3D AI Segmentation (CPU & Cloud Optimized)
+- **Engine 1 (TotalSegmentator Pretrained Universal):** Targeted organ selection (`roi_subset`) for 50+ anatomical organs and 4 cardiac chambers (LA, LV, RA, RV, Myocardium, Aorta, Pulmonary Artery) with `fast=True` 3mm low-memory execution.
+- **Engine 2 (MONAI 3D Residual U-Net):** Sliding-window Gaussian patch inference with `sw_batch_size=1`, `torch.inference_mode()`, and single-thread CPU execution.
 
-### 3.3 3D U-Net Baseline Segmentation
-Deep learning segmentation model built with MONAI and PyTorch:
-- Architecture: 3D U-Net with residual encoder units and deep supervision.
-- Loss Function: Composite `DiceCELoss` (Dice Loss + Cross-Entropy Loss).
-- Sliding-window volumetric inference with Gaussian patch weighting to eliminate tile boundary artifacts.
+### 3.3 Quantitative Clinical Validation & Biomarkers
+Automated computation of Dice Similarity Coefficient (DSC), Intersection-over-Union (IoU), 95% Hausdorff Distance (HD95 mm), Average Surface Distance (ASD mm), Sensitivity/Recall, Specificity, and 2x2 Confusion Matrices.
 
-### 3.4 Multichannel & Derived Spectral Feature Experiment
-An experimental module evaluating whether feeding hand-crafted spatial filters alongside raw voxel intensities improves model convergence and edge delineation:
-- Channel 0: Normalized voxel intensity.
-- Channel 1: 3D Sobel spatial gradient magnitude (structural boundaries).
-- Channel 2: 3D Laplacian / Hessian eigenvalues (curvature and ridges).
-- Channel 3: Local Gabor texture frequency filter.
+### 3.4 Vectorized 3D Surface Reconstruction & Binary STL CAD Export
+Sub-voxel Marching Cubes polygonal mesh extraction, anatomical surface area ($cm^2$) computation, pure C-memory NumPy structured array Binary STL export (100x speedup), and Wavefront OBJ export for Three.js WebGL rendering.
 
-### 3.5 Quantitative Evaluation Suite
-Computes clinical segmentation metrics comparing predicted masks to ground truth:
-- Volumetric Overlap: Dice Similarity Coefficient (DSC), Intersection-over-Union (IoU / Jaccard Index).
-- Boundary Precision: 95th percentile Hausdorff Distance (HD95), Average Surface Distance (ASD).
-- Classification Metrics: Sensitivity (Recall), Specificity, Precision.
+### 3.5 Fast Multi-Resolution SimpleITK 3D Image Registration
+2x downsampled multi-resolution Gaussian pyramid rigid 6-DOF Euler3D and Affine spatial alignment using Mattes Mutual Information and Regular Step Gradient Descent optimizer (converges in ~1.2s on CPU).
 
-### 3.6 3D Surface Mesh Reconstruction & STL Export
-Converts binary segmentation masks into high-fidelity 3D polygonal surface meshes:
-- Applies scikit-image Marching Cubes algorithm with sub-voxel vertex interpolation.
-- Performs Laplacian surface smoothing and decimation to produce clean CAD-ready geometries.
-- Exporters: Direct download of `.stl` (3D printing) and `.obj` formats.
+### 3.6 On-Demand Multichannel Spectral Feature Extraction
+Memory-efficient on-demand 3D Sobel spatial gradients ($\|\nabla I\|$), Laplacian second-derivative curvature, and Gabor texture energy filters.
 
-### 3.7 Medical Image Registration (SimpleITK)
-Aligns moving patient scans to a canonical fixed atlas or prior baseline scan:
-- Transform Models: `Euler3DTransform` (6 DOF rigid) and `AffineTransform` (12 DOF).
-- Metric: Mattes Mutual Information or Normalized Correlation.
-- Optimizer: Regular Step Gradient Descent with multi-resolution Gaussian pyramid.
+### 3.7 AI Radiologist Diagnostic Report Generator
+Computes left atrial volume ($cm^3$) and 3D sphericity index to classify Left Atrial Enlargement (LAE Grade: Normal, Mild, Moderate, Severe) with formal printable Markdown report export.
 
-### 3.8 Simulated Surgical Navigation Visualization
-Renders a simulated intra-operative navigation interface:
-- Multi-Planar Reconstruction (MPR): Synchronized Axial, Coronal, and Sagittal orthogonal cross-sections with segmentation overlays.
-- 3D Virtual Tool Tracking: Interactive pointer tool positioned relative to reconstructed 3D anatomical meshes using embedded `stpyvista`.
+### 3.8 Clinical Safety Interceptors & Adversarial QA Audits
+Pre-inference input validation (intensity sanity, dimension check, zero-variance artifact detection), segmentation volume anomaly boundary checking, and Gaussian noise stress testing.
 
-### 3.9 Local Vision-Language Model (VLM) Clinical Report
-Generates structured anatomical descriptions and quantitative metric summaries using local lightweight LLMs/VLMs without sending confidential patient scans to external commercial APIs.
+### 3.9 Live RAM Telemetry & Memory Hygiene
+Real-time process memory monitor rendered in the Streamlit sidebar with automated garbage collection (`gc.collect()`) upon tab switching or file ingestion.
 
-### 3.10 Interactive Modern Next.js & Three.js Web Frontend
-Clean, modern dark-mode Streamlit frontend organized into logical sequential stages (`01_upload` through `10_export`) with persistent session state.
+### 3.10 Supabase Cloud Database Integration & Telemetry
+Stores patient records, scan metadata, segmentation metrics, and execution history in a persistent Supabase PostgreSQL database.
 
 ---
 
 ## 4. User Stories
-- **As a researcher**, I want to upload a patient NIfTI MRI scan and run automated 3D segmentation, so that I can inspect the predicted anatomical boundary in seconds.
-- **As a biomechanical engineer**, I want to export the segmented organ geometry as an STL mesh, so that I can prepare anatomical models for 3D printing or finite-element analysis.
-- **As an algorithmic researcher**, I want to compare validation Dice curves between the single-channel baseline and the 4-channel spectral U-Net, so that I can publish rigorous ablation findings.
-- **As a surgical trainee**, I want to interactively move a crosshair across MPR slices and see the corresponding 3D tool position on the organ mesh, so that I can understand spatial registration in surgical navigation.
+- **As a researcher**, I want to upload a 3D cardiac MRI scan, so that I can automatically segment specific organs (e.g. left ventricle, aorta) in seconds without crashing the 2.7GB cloud runtime.
+- **As a medical educator**, I want to instantly download an accurate 3D binary STL CAD model, so that I can 3D print physical anatomical models for student training.
+- **As a clinician**, I want to spatially register patient scans against a canonical atlas, so that I can inspect misalignment parameters within 2 seconds.
+- **As a developer**, I want to monitor live memory consumption in the UI sidebar, so that I have complete visibility into RAM utilization.
 
 ---
 
 ## 5. Technical Requirements
 
 ### 5.1 Data Sources / External Dependencies
-- **Medical Segmentation Decathlon (MSD) Task02_Heart:** Public benchmark dataset containing 20 training and 10 testing mono-modal 3D MRI scans of the left atrium (`https://msd-for-monai.s3-us-west-2.amazonaws.com/Task02_Heart.tar`).
-- **Hugging Face Hub:** Host for pre-trained U-Net weights and checkpoint versioning (`huggingface_hub`).
+- **Hugging Face Hub:** Checkpoint repository (`ashhal/medivision-unet-heart`) for automated PyTorch model weight distribution.
+- **TotalSegmentator Pretrained Models:** Downloaded on-demand via `totalsegmentator` Python API with `roi_subset` targeting.
+- **Supabase Cloud Database:** PostgreSQL database instance (`aluzqooagiymysssnhkg.supabase.co`) for audit telemetry.
 
 ### 5.2 Architecture
-Decoupled full-stack application (Next.js TypeScript Frontend + FastAPI Python Backend). Training is decoupled into Kaggle/Colab notebooks; inference, preprocessing, reconstruction, and UI are executed within a unified Streamlit runtime (see `docs/architecture.md`).
+Decoupled multi-tier system with FastAPI backend service (`backend/app/`), Streamlit Cloud application (`streamlit_app.py`), Next.js 15 WebGL client (`frontend/`), and Supabase database. Detailed in `docs/architecture.md`.
 
 ### 5.3 Tech Stack
-Python 3.10+, PyTorch 2.14.0, MONAI 1.6.0, SimpleITK 2.5.6, NiBabel 5.4.2, scikit-image 0.26.0, Streamlit 1.40.0 (pinned), stpyvista 0.1.4 (pinned), PyVista (see `docs/tech-stack.md`).
+Python 3.12, PyTorch 2.14, MONAI 1.6, TotalSegmentator, SimpleITK 2.5, NiBabel 5.4, scikit-image 0.26, FastAPI, Streamlit, Next.js 15, Three.js, and TypeScript. Detailed in `docs/tech-stack.md`.
 
 ### 5.4 Hardware / Infra Constraints
-- **Inference & UI:** Runs on standard CPU or lightweight GPU (< 2.7GB RAM limit on Streamlit Community Cloud).
-- **Training:** Executed on free-tier Kaggle GPU (30 hours/week, 16GB P100 / 32GB T4x2) or Google Colab (12h session max).
+- **Primary Live Target:** Streamlit Community Cloud (2.7 GB RAM limit, single-vCPU environment). Enforces single-threaded execution (`OMP_NUM_THREADS=1`, `torch.set_num_threads(1)`) and targeted sub-model execution.
+- **Local / On-Premise:** Supports both CPU-only execution and NVIDIA CUDA GPU hardware acceleration.
 
 ### 5.5 API Access Requirements
-- Hugging Face Hub User Access Token (Fine-grained write scope for checkpoint publication; read-only/anonymous for public model download).
+- Supabase API credentials (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) managed via environment variables.
 
 ---
 
 ## 6. Success Metrics
-- **Segmentation Accuracy:** Validation Mean Dice Similarity Coefficient > 0.70 on MSD Task02_Heart Left Atrium.
-- **Reconstruction Quality:** Marching Cubes produces manifold, watertight STL meshes with zero self-intersecting degenerate faces.
-- **Registration Accuracy:** Target Registration Error (TRE) < 3.0 mm on synthetic rigid transformation tests.
-- **UI Responsiveness:** 3D PyVista viewport renders with interactive frame rates (> 20 FPS) on standard client browsers.
+- Zero Out-Of-Memory (OOM) crashes on Streamlit Community Cloud (< 1.8GB peak RAM).
+- Fast 3D binary STL export in < 10ms for meshes up to 200,000 faces.
+- SimpleITK registration convergence < 2.0 seconds on standard CPU.
+- 100% automated test suite pass rate across all 23 REST API endpoints.
 
 ---
 
 ## 7. Scope & Milestones (suggested)
-- **Phase 1:** Dataset Ingestion & Preprocessing Pipeline (`src/data.py`, `src/preprocess.py`).
-- **Phase 2:** Baseline 3D U-Net Training & Checkpoint Export (`src/segment.py`).
-- **Phase 3:** Evaluation & Validation Metrics Suite (`src/metrics.py`).
-- **Phase 4:** 3D Surface Reconstruction & STL Export (`src/reconstruct.py`).
-- **Phase 5:** SimpleITK 3D Registration Pipeline (`src/register.py`).
-- **Phase 6:** Multichannel Derived Feature Experiment (`src/spectral.py`).
-- **Phase 7:** Local Clinical VLM Explanation Generator (`src/vlm.py`).
-- **Phase 8:** Multi-Page Streamlit User Interface (`app/`).
-- **Phase 9:** Live Streamlit Cloud Deployment & Final Project Delivery.
+- **Phase 0 — Specification & Architecture:** Complete PRD, architecture specs, and API contracts. *(Completed)*
+- **Phase 1 — Ingestion & Preprocessing:** Spline resampling, normalization, synthetic generator. *(Completed)*
+- **Phase 2 — Dual-Engine AI Segmentation:** TotalSegmentator with `roi_subset` + MONAI 3D Residual U-Net. *(Completed)*
+- **Phase 3 — Clinical Metrics & Vectorized STL:** Dice/HD95 computation and NumPy binary STL export. *(Completed)*
+- **Phase 4 — Fast Registration & Spectral Filters:** SimpleITK 2x multi-resolution and on-demand Gabor extraction. *(Completed)*
+- **Phase 5 — Clinical Reports & Safety QA:** LAE classification, RAM telemetry, and adversarial interceptors. *(Completed)*
+- **Phase 6 — Cloud Database & Deployment:** Supabase PostgreSQL sync and Streamlit Cloud live launch. *(Completed)*
 
 ---
 
 ## 8. Risks & Limitations
-- **Medical Disclaimer:** Strict limitation to non-clinical educational research.
-- **Compute Constraints:** Colab GPU disconnects and session timeouts require robust epoch-level checkpointing on validation score improvement.
-- **Streamlit / PyVista Rendering Incompatibilities:** Streamlit frontend architecture changes require strictly pinning `streamlit==1.40.0` and `stpyvista==0.1.4`.
+- **Memory Spikes during High-Res Inference:** Mitigated via `roi_subset`, `sw_batch_size=1`, and single-threaded CPU configuration.
+- **Non-Clinical Research Status:** Clear visual disclaimers rendered across all frontend views and API outputs.
 
 ---
 
-## 9. Open Questions & Resolution Log
-| # | Question / Uncertainty | Resolution / Decision |
-|---|---|---|
-| 1 | Should the backend be a standalone FastAPI service or embedded in Streamlit? | **Resolved (2026-09-02):** Embedded single-process Streamlit app. For a local/demo research prototype, FastAPI adds unnecessary networking overhead and duplicate data serialization. |
-| 2 | Where should the application be deployed for free public access? | **Resolved (2026-09-03):** Streamlit Community Cloud (2.7GB RAM, 50GB storage). Render was dropped due to 512MB memory limit. Checkpoints stored on Hugging Face Hub to avoid Git LFS costs. |
-| 3 | How to handle `stpyvista` incompatibility with recent Streamlit versions? | **Resolved (2026-09-03):** Pinned `streamlit==1.40.0` and `stpyvista==0.1.4` in `requirements.txt`. Verified working in clean venv. |
+## 9. Open Questions
+- *Resolved:* How to eliminate Colab/Kaggle training dependencies completely? $\rightarrow$ Migrated 100% to Pretrained Universal TotalSegmentator and Hugging Face weights.
+- *Resolved:* How to prevent Streamlit Cloud 2.7GB RAM crashes? $\rightarrow$ Implemented `roi_subset` targeted segmentation, single-threaded PyTorch, and active RAM telemetry.
