@@ -58,7 +58,7 @@ st.markdown("""
 
 # Session State Initialization
 if "volume" not in st.session_state:
-    vol_path, mask_path, meta = create_synthetic_sample(shape=(64, 64, 64))
+    vol_path, mask_path = create_synthetic_sample(shape=(64, 64, 64))
     vol_data, _, _ = load_medical_image(vol_path)
     mask_data, _, _ = load_medical_image(mask_path)
     st.session_state.volume = vol_data
@@ -239,7 +239,7 @@ elif module == "5. SimpleITK 3D Image Registration":
         c1, c2, c3 = st.columns(3)
         c1.metric("Iterations to Converge", rr["iterations"])
         c2.metric("Final Metric Value", f"{rr['final_metric_value']:.4f}")
-        c3.metric("Translation (Tx, Ty, Tz)", f"({rr.get('translation_x_mm', 0)}, {rr.get('translation_y_mm', 0)}, {rr.get('translation_z_mm', 0)}) mm")
+        t_mm = rr.get('translation_mm', {'x': 0, 'y': 0, 'z': 0}); c3.metric("Translation (Tx, Ty, Tz)", f"({t_mm.get('x', 0)}, {t_mm.get('y', 0)}, {t_mm.get('z', 0)}) mm")
 
 # -------------------------------------------------------------
 # 6. 4-Channel Spectral Gradient Filters
@@ -275,22 +275,25 @@ elif module == "6. 4-Channel Spectral Gradient Filters":
 elif module == "7. AI Radiologist Diagnostic Report":
     st.subheader("7. Automated Clinical AI Radiologist Diagnostic Report")
     
+    scan_m = {"shape": list(st.session_state.volume.shape), "spacing": list(st.session_state.spacing), "filename": "heart_mri.nii.gz"}
+    seg_m = st.session_state.get("seg_meta", {"volume_cm3": 38.5, "surface_area_cm2": 19.34, "sphericity_index": 0.82})
+    eval_m = st.session_state.get("metrics", {"dice_coefficient": 0.9167, "iou_jaccard": 0.8462, "hd95_mm": 2.0})
+    
     rep = generate_clinical_report(
+        scan_meta=scan_m,
+        seg_meta=seg_m,
+        eval_metrics=eval_m,
         patient_id=st.session_state.patient_id,
-        volume_cm3=38.5,
-        surface_area_cm2=19.34,
-        dice_score=0.9167,
     )
     
-    st.markdown(f"### Classification: `{rep['classification']}`")
-    st.info(rep["structured_summary"])
+    imp = rep.get("clinical_impression", {})
+    st.markdown(f"### Diagnostic Assessment: `{imp.get('classification', 'Normal Morphology')}`")
+    st.info(imp.get("summary_statement", "Normal left atrial anatomy."))
     
-    st.markdown("**Clinical Impressions:**")
-    for imp in rep["radiologist_impressions"]:
-        st.markdown(f"- {imp}")
+    st.markdown(f"**Description:** {imp.get('description', 'Left atrial chamber volume within physiological limits.')}")
         
-    st.markdown("**Recommendations:**")
-    for rec in rep["recommendations"]:
+    st.markdown("**Recommended Next Steps:**")
+    for rec in rep.get("recommendations", []):
         st.markdown(f"- {rec}")
 
 # -------------------------------------------------------------

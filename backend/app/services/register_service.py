@@ -28,9 +28,16 @@ def register_3d_images(
     Returns:
         Dictionary containing translation (mm), rotation (degrees), final metric value, and output paths.
     """
-    # 1. Read images via SimpleITK
-    fixed_img = sitk.ReadImage(str(fixed_image_path), sitk.sitkFloat32)
-    moving_img = sitk.ReadImage(str(moving_image_path), sitk.sitkFloat32)
+    # 1. Read images via SimpleITK (supports both filepath and numpy array)
+    if isinstance(fixed_image_path, np.ndarray):
+        fixed_img = sitk.GetImageFromArray(fixed_image_path.astype(np.float32))
+    else:
+        fixed_img = sitk.ReadImage(str(fixed_image_path), sitk.sitkFloat32)
+
+    if isinstance(moving_image_path, np.ndarray):
+        moving_img = sitk.GetImageFromArray(moving_image_path.astype(np.float32))
+    else:
+        moving_img = sitk.ReadImage(str(moving_image_path), sitk.sitkFloat32)
 
     # 2. Initialize spatial transform
     if transform_type.lower() == "affine":
@@ -119,6 +126,7 @@ def register_3d_images(
         "transform_type": transform_type,
         "final_metric_value": round(final_metric, 5),
         "optimizer_iterations": num_iters,
+        "iterations": num_iters,
         "stop_condition": stop_condition,
         "rotation_deg": {
             "x": rot_x_deg,
