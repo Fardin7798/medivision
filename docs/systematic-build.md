@@ -79,7 +79,7 @@
 ### Phase 9 — 3D Reconstruction & Registration Core
 - [x] Implement Marching Cubes surface extraction, Laplacian smoothing, and STL/OBJ export in `backend/app/services/reconstruct_service.py`.
 - [x] Implement SimpleITK Euler3D/Affine registration in `backend/app/services/register_service.py`.
-- [x] Implement Three.js 3D WebGL interactive rendering in `frontend/` and Matplotlib/STL in `streamlit_app.py`.
+- [x] Implement Three.js 3D WebGL interactive rendering in `frontend/` (`STLLoader` loads the real backend mesh via `stlUrl`, wired on `/reconstruct`; other views still show a labeled placeholder until they trigger reconstruction — fixed 2026-09-03, see CONTEXT.md bug #4) and Matplotlib/STL in `streamlit_app.py`.
 
 ### Phase 10 — Multichannel Experiment & Clinical Diagnostic Report Module
 - [x] Implement 3D Sobel, Laplacian, and Gabor feature extraction in `backend/app/services/spectral_service.py`.
@@ -101,3 +101,6 @@
 | 1 | Streamlit runtime crash on `import stpyvista` | Upstream `streamlit==1.63.0` introduced Components v2 architecture incompatible with `stpyvista 0.2.1`. | Pinned `streamlit==1.40.0` and `stpyvista==0.1.4` in `requirements.txt`. |
 | 2 | `AttributeError: 'float' object has no attribute 'get'` | `run_segmentation_inference` returned tuple with float volume; UI and report generators invoked `.get("volume_cm3")`. | Encapsulated metadata into structured dictionary and added defensive type guards in `streamlit_app.py` and `report_service.py`. |
 | 3 | `KeyError: 'hd95_mm'` in Quantitative Evaluation | `compute_segmentation_metrics` returned `hausdorff_distance_95_mm`; UI looked for `hd95_mm`. | Added key aliases (`hd95_mm`, `asd_mm`) to metrics service and used safe `.get()` in `streamlit_app.py`. |
+| 4 | `Viewport3D.tsx` showed a fake mesh instead of real anatomy | Hardcoded rotating sphere geometry never replaced with real backend mesh loading — violated "Label fake vs. real out loud." | Added `STLLoader`-based loading via `stlUrl` prop; wired real `stl_download_url` on `/reconstruct`. Placeholder now explicitly labeled. See CONTEXT.md. |
+| 5 | Cloud sync posted fabricated metrics | `POST /api/cloud/sync` and `cloud/page.tsx` hardcoded `volume_cm3`/`dice_coefficient`/scan metadata — violated "Never report simulated/fabricated metrics." | Frontend now runs the real segment→evaluate pipeline before syncing; backend rejects (400) sync requests missing real fields. See CONTEXT.md. |
+| 6 | Hardcoded Supabase secret in source | `supabase_service.py` and `frontend/src/lib/supabase.ts` embedded a live anon key as fallback default — violated "Never hardcode API keys, secrets." | Removed; credentials now env-var only. See CONTEXT.md (rotation of the exposed key still recommended). |

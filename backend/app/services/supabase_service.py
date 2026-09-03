@@ -3,8 +3,11 @@ import os
 from typing import Dict, List, Optional, Any
 from supabase import create_client, Client
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://aluzqooagiymysssnhkg.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdXpxb29hZ2l5bXlzc3NuaGtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNzY2MDgsImV4cCI6MjEwMzk1MjYwOH0.lXP2dKg93qvi_BL51UUwJrNctDP3VM8zImJ_BkjMMpc")
+# No hardcoded fallback secrets: credentials must come from the environment
+# (see .env.example). Without them, the client stays offline and every
+# service function below degrades gracefully to {"status": "offline_skipped"}.
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 
 _client: Optional[Client] = None
 
@@ -18,6 +21,10 @@ def get_supabase() -> Optional[Client]:
             print(f"[MediVision Supabase] Connection error: {e}")
             return None
     return _client
+
+def is_connected() -> bool:
+    """Return True only if a real Supabase client was actually initialized."""
+    return get_supabase() is not None
 
 def record_patient(patient_id: str, patient_name: str = "Anonymous Subject", modality: str = "Cardiac 3D MRI") -> Dict[str, Any]:
     """Insert or update patient record in Supabase."""

@@ -157,7 +157,10 @@ export default function ReconstructPage() {
       )}
 
       {/* 3D WebGL Mesh Viewport */}
-      <Viewport3D title={meshResult ? `3D Left Atrium (${meshResult.num_faces.toLocaleString()} Facets)` : "3D Surface Mesh Viewer"} />
+      <Viewport3D
+        title={meshResult ? `3D Left Atrium (${meshResult.num_faces.toLocaleString()} Facets)` : "3D Surface Mesh Viewer"}
+        stlUrl={meshResult ? `${API_BASE_URL}${meshResult.stl_download_url}` : null}
+      />
     </div>
   );
 }

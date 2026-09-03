@@ -1,5 +1,6 @@
 "use client";
 import { API_BASE_URL } from "@/lib/api";
+import { generateSyntheticSample, preprocessScan } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { 
   Database, 
@@ -8,12 +9,8 @@ import {
   CheckCircle2, 
   UploadCloud, 
   User, 
-  Layers, 
-  FileText, 
-  Activity,
-  HardDrive
+  AlertTriangle,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
 interface PatientRecord {
   id: string;
@@ -39,9 +36,11 @@ interface PatientRecord {
 
 export default function CloudPage() {
   const [patients, setPatients] = useState<PatientRecord[]>([]);
+  const [connected, setConnected] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const fetchCloudRecords = async () => {
     setLoading(true);
@@ -50,9 +49,13 @@ export default function CloudPage() {
       if (res.ok) {
         const data = await res.json();
         setPatients(data.history || []);
+        setConnected(!!data.connected);
+      } else {
+        setConnected(false);
       }
     } catch (e) {
       console.error(e);
+      setConnected(false);
     } finally {
       setLoading(false);
     }
@@ -64,26 +67,58 @@ export default function CloudPage() {
 
   const handleSyncCurrent = async () => {
     setSyncing(true);
+    setSyncError(null);
     try {
+      // Run the REAL pipeline so we sync actual computed numbers — never
+      // fabricated placeholders. See CONTEXT.md "Rules for MediVision".
+      const sample = await generateSyntheticSample();
+      const prep = await preprocessScan(sample.file_id);
+
+      const segRes = await fetch(`${API_BASE_URL}/api/segment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_id: prep.preprocessed_file_id }),
+      });
+      if (!segRes.ok) throw new Error("Segmentation failed");
+      const segData = await segRes.json();
+
+      const evalRes = await fetch(`${API_BASE_URL}/api/evaluate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pred_mask_id: segData.mask_id }),
+      });
+      if (!evalRes.ok) throw new Error("Evaluation failed");
+      const evalData = await evalRes.json();
+      const m = evalData.metrics;
+
       const res = await fetch(`${API_BASE_URL}/api/cloud/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          patient_id: `MED-AUTO-${Math.floor(Math.random() * 9000 + 1000)}`,
+          patient_id: `MED-AUTO-${Date.now()}`,
           patient_name: "Research Subject (Live Session)",
-          scan_id: `scan_live_${Date.now()}`,
-          filename: "cardiac_mri_3d.nii.gz",
-          volume_cm3: 38.5,
-          dice_coefficient: 0.9167,
+          scan_id: prep.preprocessed_file_id,
+          filename: sample.filename,
+          shape: prep.preprocessed_shape,
+          spacing: prep.target_spacing,
+          volume_cm3: segData.volume_cm3,
+          voxel_count: segData.voxels_segmented,
+          dice_coefficient: m.dice_coefficient,
+          iou_jaccard: m.iou_jaccard,
+          hd95_mm: m.hd95_mm,
+          asd_mm: m.asd_mm,
         }),
       });
-      if (res.ok) {
-        setSyncSuccess(true);
-        setTimeout(() => setSyncSuccess(false), 3000);
-        await fetchCloudRecords();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "Sync failed");
       }
+      setSyncSuccess(true);
+      setTimeout(() => setSyncSuccess(false), 3000);
+      await fetchCloudRecords();
     } catch (e) {
       console.error(e);
+      setSyncError(e instanceof Error ? e.message : "Sync failed");
     } finally {
       setSyncing(false);
     }
@@ -139,7 +174,7 @@ export default function CloudPage() {
             }}
           >
             <UploadCloud size={16} />
-            <span>{syncing ? "Syncing to Cloud..." : "Sync Current Session"}</span>
+            <span>{syncing ? "Running pipeline & syncing..." : "Run & Sync New Session"}</span>
           </button>
         </div>
       </div>
@@ -157,31 +192,41 @@ export default function CloudPage() {
           fontSize: "0.875rem",
         }}>
           <CheckCircle2 size={18} />
-          <span>Successfully synchronized medical scan & 3D U-Net segmentation record to Supabase Cloud!</span>
+          <span>Synced real segmentation & evaluation results from a freshly-run pipeline session to Supabase Cloud.</span>
         </div>
       )}
 
-      {/* Cloud Infrastructure Scorecards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1.25rem" }}>
-        <div className="glass-panel" style={{ padding: "1.25rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>PostgreSQL Connection</span>
-            <Database size={18} color="var(--accent-emerald)" />
-          </div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--accent-emerald)" }}>ACTIVE_HEALTHY</div>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-            db.skvdpkidxoidlcurujup.supabase.co
-          </div>
+      {syncError && (
+        <div style={{
+          background: "rgba(244, 63, 94, 0.12)",
+          border: "1px solid rgba(244, 63, 94, 0.4)",
+          padding: "0.75rem 1.25rem",
+          borderRadius: "8px",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          color: "var(--accent-rose)",
+          fontSize: "0.875rem",
+        }}>
+          <AlertTriangle size={18} />
+          <span>{syncError}</span>
         </div>
+      )}
 
+      {/* Cloud Connection Status (derived from real /api/cloud/history response) */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1.25rem" }}>
         <div className="glass-panel" style={{ padding: "1.25rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>Cloud Storage Buckets</span>
-            <HardDrive size={18} color="var(--accent-cyan)" />
+            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>Supabase Connection</span>
+            <Database size={18} color={connected ? "var(--accent-emerald)" : "var(--accent-rose)"} />
           </div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--accent-cyan)" }}>2 Buckets Ready</div>
+          <div style={{ fontSize: "1.5rem", fontWeight: 800, color: connected ? "var(--accent-emerald)" : "var(--accent-rose)" }}>
+            {connected === null ? "CHECKING..." : connected ? "CONNECTED" : "NOT CONFIGURED"}
+          </div>
           <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-            medical-scans, stl-meshes
+            {connected
+              ? "Live client verified against SUPABASE_URL / SUPABASE_KEY"
+              : "Set SUPABASE_URL and SUPABASE_KEY in backend .env to enable"}
           </div>
         </div>
 
@@ -195,17 +240,6 @@ export default function CloudPage() {
           </div>
           <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
             Persisted subject records
-          </div>
-        </div>
-
-        <div className="glass-panel" style={{ padding: "1.25rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>Region & Engine</span>
-            <Activity size={18} color="var(--accent-amber)" />
-          </div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--accent-amber)" }}>ap-south-1</div>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-            Postgres 17.6 (Mumbai)
           </div>
         </div>
       </div>
@@ -241,7 +275,7 @@ export default function CloudPage() {
                       <td style={{ padding: "0.75rem 0.5rem", color: "var(--text-secondary)" }}>{p.modality}</td>
                       <td style={{ padding: "0.75rem 0.5rem", fontFamily: "monospace", color: "var(--text-muted)" }}>{scan ? scan.scan_id : "N/A"}</td>
                       <td style={{ padding: "0.75rem 0.5rem", fontWeight: 700, color: "var(--accent-emerald)", fontFamily: "monospace" }}>
-                        {seg ? `${seg.volume_cm3} cm³` : "38.5 cm³"}
+                        {seg ? `${seg.volume_cm3} cm³` : "N/A"}
                       </td>
                       <td style={{ padding: "0.75rem 0.5rem", color: "var(--text-muted)", fontSize: "0.75rem" }}>
                         {new Date(p.created_at).toLocaleString()}
@@ -253,7 +287,7 @@ export default function CloudPage() {
             </table>
           </div>
         ) : (
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>No clinical records in Supabase yet. Click &ldquo;Sync Current Session&rdquo; to persist.</p>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>No clinical records in Supabase yet. Click &ldquo;Run & Sync New Session&rdquo; to persist.</p>
         )}
       </div>
     </div>

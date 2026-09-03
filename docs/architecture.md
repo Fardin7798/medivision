@@ -42,7 +42,7 @@
 
 ### 2.1 Frontend Client (`frontend/`)
 - **Next.js App Router:** Type-safe dynamic routes (`/upload`, `/preprocess`, `/segment`, `/evaluate`, `/reconstruct`, `/register`, `/navigation`, `/export`).
-- **Three.js 3D Viewport (`Viewport3D.tsx`):** Renders organ geometries exported by the backend Marching Cubes endpoint using WebGL with smooth orbit controls and interactive lighting.
+- **Three.js 3D Viewport (`Viewport3D.tsx`):** Loads and renders the real STL mesh exported by the backend Marching Cubes endpoint via `STLLoader` when a `stlUrl` is supplied (currently wired on `/reconstruct`); shows a clearly-labeled placeholder shape on views that don't yet trigger reconstruction.
 - **2D MPR Slice Viewer (`MPRViewer.tsx`):** Scrubbable multi-planar viewer fetching lightweight 2D cross-sections on demand.
 - **API Client Layer (`lib/api.ts`):** Typed HTTP client interacting with the FastAPI backend.
 
