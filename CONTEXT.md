@@ -25,7 +25,7 @@ MediVision is a production-grade 3D medical image segmentation, quantitative ana
 - **Database & Cloud Sync:** Supabase PostgreSQL (`aluzqooagiymysssnhkg.supabase.co`) for audit telemetry and patient records
 - **Alternative Web Frontend:** Next.js 15 + TypeScript + Tailwind CSS + Three.js WebGL (in `frontend/`)
 - **Alternative REST Backend:** FastAPI + Uvicorn (in `backend/app/`)
-- **Remote Training Pipeline:** Kaggle GPU (30h/week quota) / Colab via `.github/workflows/train.yml` & `backend/app/train.py`
+- **Pretrained AI Inference (Zero Local/Remote Training Needed):** TotalSegmentator Universal Pretrained Model + Hugging Face Hub (`ashhal/medivision-unet-heart`), eliminating external Kaggle/Colab training pipelines.
 
 ## File Structure
 ```
