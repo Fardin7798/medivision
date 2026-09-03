@@ -73,12 +73,12 @@ No HTTP/REST endpoints. The application exposes an interactive Streamlit UI with
 - [x] Preprocessing pipeline (`src/preprocess.py`)
 - [x] Baseline U-Net training script & inference engine (`backend/app/services/segment_service.py`, `backend/app/train.py`)
 - [x] Quantitative evaluation suite (`backend/app/services/metrics_service.py`, `backend/app/api/routes_evaluate.py`)
-- [ ] Multichannel / derived spectral feature experiment (`src/spectral.py`)
+- [x] Multichannel / derived spectral feature experiment (`backend/app/services/spectral_service.py`, `frontend/src/app/multichannel/page.tsx`)
 - [x] 3D surface mesh reconstruction & STL export (`backend/app/services/reconstruct_service.py`, `backend/app/api/routes_reconstruct.py`)
 - [x] Rigid/Affine registration engine (`backend/app/services/register_service.py`, `backend/app/api/routes_register.py`)
-- [ ] Simulated surgical navigation viewer (`src/viz.py`)
-- [ ] Local VLM explanation generator (`src/vlm.py`)
-- [ ] Complete Streamlit multi-page application (`app/`)
+- [x] Simulated surgical navigation viewer (`frontend/src/app/navigate/page.tsx`, `streamlit_app.py`)
+- [x] Local VLM / Clinical diagnostic report generator (`backend/app/services/report_service.py`, `frontend/src/app/report/page.tsx`)
+- [x] Complete Streamlit application (`streamlit_app.py`, `app/main.py` live at `https://medivision-a.streamlit.app/`)
 
 ## Current WIP & Bugs
 
