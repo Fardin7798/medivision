@@ -1,0 +1,9 @@
+data/
+models/
+outputs/
+notebooks/
+venv/
+backend/
+__pycache__/
+*.nii.gz
+*.tar
