@@ -12,6 +12,9 @@ on:
         required: false
         default: "2"
 
+env:
+  KAGGLE_SLUG: "shaikhfardin05/medivision-u-net-training"
+
 jobs:
   run_kaggle_training:
     runs-on: ubuntu-latest
@@ -32,9 +35,9 @@ jobs:
       - name: Build Kaggle kernel (script + metadata)
         run: |
           mkdir -p kaggle_job
-          cat > kaggle_job/kernel-metadata.json << 'EOF'
+          cat > kaggle_job/kernel-metadata.json << EOF
           {
-            "id": "shaikhfardin05/medivision-training",
+            "id": "$KAGGLE_SLUG",
             "title": "MediVision U-Net Training",
             "code_file": "kaggle_train.py",
             "language": "python",
@@ -72,13 +75,14 @@ jobs:
       - name: Poll kernel status until finished
         run: |
           for i in $(seq 1 120); do
-            status=$(kaggle kernels status shaikhfardin05/medivision-training | grep -o '"[a-zA-Z]*"' | tr -d '"' || echo "unknown")
-            echo "[poll $i] status: $status"
-            if [ "$status" = "complete" ]; then
+            raw=$(kaggle kernels status "$KAGGLE_SLUG" 2>&1)
+            status=$(echo "$raw" | grep -oP 'KernelWorkerStatus\.\K[A-Za-z]+' || echo "unknown")
+            echo "[poll $i] raw: $raw | parsed: $status"
+            if [ "$status" = "complete" ] || [ "$status" = "COMPLETE" ]; then
               echo "Kernel finished successfully."
               break
             fi
-            if [ "$status" = "error" ]; then
+            if [ "$status" = "error" ] || [ "$status" = "ERROR" ]; then
               echo "Kernel failed."
               exit 1
             fi
@@ -89,6 +93,6 @@ jobs:
         if: always()
         run: |
           mkdir -p kernel_output
-          kaggle kernels output shaikhfardin05/medivision-training -p kernel_output || true
+          kaggle kernels output "$KAGGLE_SLUG" -p kernel_output || true
           echo "--- kernel log tail ---"
-          find kernel_output -name "*.log" -exec tail -n 200 {} \;
+          find kernel_output -type f -exec tail -n 200 {} \;
