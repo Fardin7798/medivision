@@ -131,14 +131,41 @@ def train_medivision_unet(
     return str(best_model_path), best_metric
 
 
+def upload_checkpoint_to_hub(checkpoint_path: str, best_dice: float) -> None:
+    """Upload the best checkpoint to the configured Hugging Face Hub repo."""
+    from huggingface_hub import HfApi
+
+    cfg = get_config()
+    repo_id = cfg["hub"]["repo_id"]
+    filename = cfg["hub"]["checkpoint_filename"]
+
+    if not os.environ.get("HF_TOKEN"):
+        print("[MediVision Training] Skipping HF upload: HF_TOKEN not set in environment.")
+        return
+
+    api = HfApi()
+    api.create_repo(repo_id=repo_id, repo_type="model", private=True, exist_ok=True)
+    api.upload_file(
+        path_or_fileobj=checkpoint_path,
+        path_in_repo=filename,
+        repo_id=repo_id,
+        repo_type="model",
+        commit_message=f"Best checkpoint - Val Dice {best_dice:.4f}",
+    )
+    print(f"[MediVision Training] Uploaded best checkpoint (Dice {best_dice:.4f}) to {repo_id}")
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="MediVision 3D U-Net Training")
     parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs")
     parser.add_argument("--batch-size", type=int, default=2, help="Batch size")
     parser.add_argument("--lr", type=float, default=2e-4, help="Learning rate")
+    parser.add_argument("--no-upload", action="store_true", help="Skip Hugging Face Hub upload after training")
     args = parser.parse_args()
 
-    print(f"Training initialized with {args.epochs} epochs.")
-    # For quick smoke test validation run:
-    # train_medivision_unet(max_epochs=args.epochs, batch_size=args.batch_size, lr=args.lr)
+    print(f"[MediVision Training] Initialized with {args.epochs} epochs, batch_size={args.batch_size}, lr={args.lr}")
+    ckpt_path, best_dice = train_medivision_unet(max_epochs=args.epochs, batch_size=args.batch_size, lr=args.lr)
+
+    if not args.no_upload:
+        upload_checkpoint_to_hub(ckpt_path, best_dice)

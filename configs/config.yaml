@@ -45,7 +45,7 @@ training:
   mixed_precision: true
 
 hub:
-  repo_id: "shaikhfardin/medivision-unet-heart"
+  repo_id: "ashhal/medivision-unet-heart"
   checkpoint_filename: "unet_heart_best.pth"
   local_checkpoint_dir: "./models"
 

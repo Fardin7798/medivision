@@ -1,0 +1,34 @@
+name: Train MediVision U-Net (Kaggle GPU)
+
+on:
+  workflow_dispatch:
+    inputs:
+      epochs:
+        description: "Number of training epochs"
+        required: false
+        default: "100"
+      batch_size:
+        description: "Batch size"
+        required: false
+        default: "2"
+
+jobs:
+  run_kaggle_training:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Training on Kaggle GPU Kernel
+        uses: KevKibe/kaggle-script-action@v1.0.5
+        with:
+          username: ${{ secrets.KAGGLE_USERNAME }}
+          key: ${{ secrets.KAGGLE_KEY }}
+          title: "MediVision U-Net Training"
+          enable_gpu: true
+          enable_internet: true
+          sleep_time: 60
+          custom_script: |
+            pip install -r requirements.txt
+            export HF_TOKEN=${{ secrets.HF_TOKEN }}
+            python -m backend.app.train --epochs ${{ github.event.inputs.epochs }} --batch-size ${{ github.event.inputs.batch_size }}
