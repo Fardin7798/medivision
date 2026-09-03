@@ -112,6 +112,13 @@ python3 -m backend.app.services.report_service
 ```
 **✅ RUN on 2026-09-03, real result:** Diagnostic report generated with Left Atrial Enlargement classification, volumetric biomarkers, sphericity index, and full Markdown export format.
 
+### 6.9 Tri-Planar Navigation & Anatomical Probe Smoke Test
+```bash
+# Test real-time anatomical probing at voxel coordinates (z, y, x)
+curl -s "http://localhost:8000/api/probe?file_id=sample_heart&z=32&y=32&x=32"
+```
+**✅ RUN on 2026-09-03, real result:** Probed voxel intensity (186.96), physical coordinates (X: 40.0mm, Y: 40.0mm, Z: 40.0mm), and anatomical structure labeling.
+
 ## 7. External Dependency Reachability Test
 
 ### 7.1 MSD Task02_Heart S3 Bucket

@@ -2,25 +2,27 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  Upload, 
-  Layers, 
-  BrainCircuit, 
-  Box, 
-  Crosshair, 
-  BarChart3, 
-  Download,
-  LayoutDashboard
+import {
+  LayoutDashboard,
+  BrainCircuit,
+  Compass,
+  Crosshair,
+  Box,
+  BarChart3,
+  Layers,
+  FileText,
+  ShieldCheck,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/upload", label: "01. Upload & Inspect", icon: Upload },
-  { href: "/preprocess", label: "02. Preprocess", icon: Layers },
-  { href: "/segment", label: "03. 3D Segmentation", icon: BrainCircuit },
-  { href: "/reconstruct", label: "04. 3D Mesh (STL)", icon: Box },
-  { href: "/register", label: "05. Registration", icon: Crosshair },
-  { href: "/evaluate", label: "06. Evaluation", icon: BarChart3 },
+  { href: "/segment", label: "3D Segmentation", icon: BrainCircuit },
+  { href: "/navigate", label: "Tri-Planar Navigation", icon: Compass },
+  { href: "/register", label: "Image Registration", icon: Crosshair },
+  { href: "/reconstruct", label: "3D Mesh & STL", icon: Box },
+  { href: "/evaluate", label: "Clinical Evaluation", icon: BarChart3 },
+  { href: "/multichannel", label: "Multichannel Features", icon: Layers },
+  { href: "/report", label: "Radiologist Report", icon: FileText },
 ];
 
 export default function Sidebar() {
@@ -29,44 +31,77 @@ export default function Sidebar() {
   return (
     <aside style={{
       width: "260px",
-      minHeight: "calc(100vh - 73px)",
-      background: "rgba(15, 23, 42, 0.5)",
+      minHeight: "calc(100vh - 64px)",
+      background: "rgba(10, 14, 23, 0.75)",
+      backdropFilter: "blur(16px)",
       borderRight: "1px solid var(--border-color)",
-      padding: "1.5rem 1rem",
       display: "flex",
       flexDirection: "column",
-      gap: "0.5rem",
+      justifyContent: "space-between",
+      padding: "1.25rem 1rem",
     }}>
-      <div style={{ padding: "0 0.5rem 0.75rem 0.5rem", fontSize: "0.7rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-        Pipeline Stages
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <div style={{
+          fontSize: "0.7rem",
+          fontWeight: 700,
+          color: "var(--text-muted)",
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          padding: "0.25rem 0.75rem",
+          marginBottom: "0.25rem",
+        }}>
+          Pipeline Workflows
+        </div>
+
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                padding: "0.65rem 0.85rem",
+                borderRadius: "8px",
+                fontSize: "0.85rem",
+                fontWeight: isActive ? 600 : 500,
+                color: isActive ? "#ffffff" : "var(--text-secondary)",
+                background: isActive ? "linear-gradient(90deg, rgba(6, 182, 212, 0.25) 0%, rgba(59, 130, 246, 0.15) 100%)" : "transparent",
+                border: isActive ? "1px solid rgba(6, 182, 212, 0.4)" : "1px solid transparent",
+                textDecoration: "none",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Icon size={18} color={isActive ? "var(--accent-cyan)" : "var(--text-muted)"} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
       </div>
-      {NAV_ITEMS.map((item) => {
-        const Icon = item.icon;
-        const isActive = pathname === item.href;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              padding: "0.75rem 1rem",
-              borderRadius: "8px",
-              textDecoration: "none",
-              fontSize: "0.875rem",
-              fontWeight: isActive ? 600 : 400,
-              color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
-              background: isActive ? "rgba(6, 182, 212, 0.15)" : "transparent",
-              border: isActive ? "1px solid rgba(6, 182, 212, 0.3)" : "1px solid transparent",
-              transition: "all 0.15s ease",
-            }}
-          >
-            <Icon size={18} color={isActive ? "var(--accent-cyan)" : "var(--text-muted)"} />
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
+
+      {/* Safety Notice Footer */}
+      <div style={{
+        padding: "0.85rem",
+        background: "rgba(244, 63, 94, 0.08)",
+        border: "1px solid rgba(244, 63, 94, 0.25)",
+        borderRadius: "8px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.4rem",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+          <ShieldCheck size={14} color="var(--accent-rose)" />
+          <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--accent-rose)", textTransform: "uppercase" }}>
+            Research Only
+          </span>
+        </div>
+        <p style={{ fontSize: "0.68rem", color: "var(--text-muted)", lineHeight: 1.4 }}>
+          Not for clinical diagnostics or real patient surgery.
+        </p>
+      </div>
     </aside>
   );
 }

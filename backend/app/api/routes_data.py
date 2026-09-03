@@ -134,3 +134,46 @@ def get_or_create_sample():
         "max_intensity": meta["max_intensity"],
         "message": "Synthetic cardiac MRI generated successfully."
     }
+
+@router.get("/probe")
+def probe_voxel_coordinates(
+    file_id: str = Query("sample_heart", description="File ID"),
+    mask_id: Optional[str] = Query(None, description="Optional mask file ID"),
+    z: int = Query(32, ge=0),
+    y: int = Query(32, ge=0),
+    x: int = Query(32, ge=0),
+):
+    """Probe voxel intensity, segmentation label, and physical coordinate (mm) at (z, y, x)."""
+    if file_id not in FILE_REGISTRY:
+        raise HTTPException(status_code=404, detail="Scan file_id not found.")
+
+    data, affine, meta = load_medical_image(FILE_REGISTRY[file_id]["path"])
+    shape = data.shape
+
+    # Clamp coordinates
+    cz = max(0, min(z, shape[0] - 1))
+    cy = max(0, min(y, shape[1] - 1))
+    cx = max(0, min(x, shape[2] - 1))
+
+    intensity = float(data[cz, cy, cx])
+    spacing = meta.get("spacing", [1.0, 1.0, 1.0])
+
+    # Physical coordinates in mm from origin
+    phys_x = round(float(cx * spacing[2]), 2)
+    phys_y = round(float(cy * spacing[1]), 2)
+    phys_z = round(float(cz * spacing[0]), 2)
+
+    label = 0
+    if mask_id and mask_id in FILE_REGISTRY:
+        mask_data, _, _ = load_medical_image(FILE_REGISTRY[mask_id]["path"])
+        if mask_data.shape == shape:
+            label = int(mask_data[cz, cy, cx])
+
+    return {
+        "voxel_indices": {"z": cz, "y": cy, "x": cx},
+        "physical_coords_mm": {"x": phys_x, "y": phys_y, "z": phys_z},
+        "intensity": round(intensity, 2),
+        "segmentation_label": label,
+        "structure": "Left Atrial Cavity" if label > 0 else "Background / Surrounding Tissue",
+        "shape": list(shape),
+    }
