@@ -5,9 +5,10 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from fastapi import APIRouter, HTTPException, Body, Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
+from backend.app.domain.schemas import SegmentRequest
 from backend.app.services.segment_service import segment_volume_file
 from backend.app.services.data_service import load_medical_image
 from backend.app.api.routes_data import FILE_REGISTRY
@@ -15,15 +16,14 @@ from backend.app.api.routes_data import FILE_REGISTRY
 router = APIRouter(prefix="/api", tags=["Segmentation"])
 
 @router.post("/segment")
-def segment_scan(payload: dict = Body(...)):
+def segment_scan(payload: SegmentRequest):
     """Run 3D AI segmentation (TotalSegmentator Pretrained Universal Engine or MONAI 3D Residual U-Net)."""
-    file_id = payload.get("file_id")
+    file_id = payload.file_id
     if not file_id or file_id not in FILE_REGISTRY:
         raise HTTPException(status_code=404, detail="Valid file_id required.")
 
-    engine = payload.get("engine", "totalsegmentator")
-    target_structure = payload.get("target_structure", "all")
-    task = payload.get("task", "total_mr")
+    engine = payload.engine
+    target_structure = payload.target_structure
 
     input_path = FILE_REGISTRY[file_id]["path"]
     out_dir = Path("./outputs")
@@ -35,7 +35,6 @@ def segment_scan(payload: dict = Body(...)):
         output_mask_file=mask_path,
         engine=engine,
         target_structure=target_structure,
-        task=task,
     )
 
     mask_id = f"{file_id}_mask"
@@ -50,6 +49,7 @@ def segment_scan(payload: dict = Body(...)):
     }
 
     return {
+        "status": "success",
         "mask_id": mask_id,
         "input_file_id": file_id,
         "engine_used": meta.get("engine", engine),

@@ -190,3 +190,7 @@ if __name__ == "__main__":
     print(f"  Rotation: {res['rotation_deg']}")
     print(f"  Translation: {res['translation_mm']}")
     print(f"  Output: {res['registered_image_path']}")
+
+# Convenience aliases for API router consistency
+register_volume_files = register_3d_images
+create_registration_pair_sample = create_perturbed_scan_pair

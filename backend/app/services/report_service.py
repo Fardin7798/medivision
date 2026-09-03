@@ -1,12 +1,11 @@
-"""Local Clinical AI Diagnostic Report Generation Service for MediVision."""
+"""Automated Clinical Diagnostic Radiologist Reporting Service for MediVision."""
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Dict, Tuple, Optional, Any
+from typing import Dict, Optional, Tuple, Any, List
 
 
 def classify_left_atrial_enlargement(volume_cm3: float) -> Tuple[str, str, str]:
     """
-    Classify Left Atrial Enlargement (LAE) based on clinical volumetric thresholds.
+    Classify Left Atrial Enlargement (LAE) according to ASE/EACVI volumetric guidelines.
     Returns: (grade, color_code, clinical_description)
     """
     if volume_cm3 < 18.0:
@@ -28,6 +27,8 @@ def generate_clinical_report(
     reg_meta: Optional[Dict[str, Any]] = None,
     patient_name: str = "Anonymous Patient (Research Subject)",
     patient_id: str = "MED-2026-9810",
+    clinical_indication: str = "3D Diagnostic Volumetric Evaluation",
+    **kwargs: Any,
 ) -> Dict[str, Any]:
     """
     Synthesize imaging metadata, 3D segmentation measurements, and clinical metrics
@@ -60,6 +61,7 @@ def generate_clinical_report(
         "patient": {
             "patient_id": patient_id,
             "patient_name": patient_name,
+            "clinical_indication": clinical_indication,
             "modality": "Cardiac 3D Magnetic Resonance Imaging (MRI)",
             "exam_type": "Volumetric Left Atrium & Myocardial Evaluation",
         },
@@ -116,6 +118,7 @@ def format_report_markdown(report: Dict[str, Any]) -> str:
         f"## Patient & Study Demographics",
         f"- **Patient ID:** {p['patient_id']}",
         f"- **Subject Name:** {p['patient_name']}",
+        f"- **Clinical Indication:** {p.get('clinical_indication', '3D Diagnostic Evaluation')}",
         f"- **Modality:** {p['modality']}",
         f"- **Exam Protocol:** {p['exam_type']}",
         f"",
@@ -155,15 +158,6 @@ def format_report_markdown(report: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-if __name__ == "__main__":
-    print("Testing Clinical Report Generation Service...")
-    sample_scan_meta = {"shape": [64, 64, 64], "spacing": [1.0, 1.0, 1.0]}
-    sample_seg_meta = {"volume_cm3": 44.2, "surface_area_cm2": 58.1}
-    sample_eval = {"dice_coefficient": 0.925, "hausdorff_distance_95_mm": 1.8}
-
-    rep = generate_clinical_report(sample_scan_meta, sample_seg_meta, sample_eval)
-    print(f"Report generated successfully: ID = {rep['report_id']}")
-    print(f"  Classification: {rep['clinical_impression']['classification']}")
-    print(f"  Volume: {rep['quantitative_findings']['left_atrium_volume_cm3']} cm3")
-    md_out = format_report_markdown(rep)
-    print(f"Markdown preview length: {len(md_out)} chars")
+# Convenience aliases for routers
+generate_radiologist_report = generate_clinical_report
+format_report_as_markdown = format_report_markdown

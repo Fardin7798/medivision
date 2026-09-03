@@ -132,3 +132,13 @@ if __name__ == "__main__":
     print(f"  Ch1 (Sobel):     Mean={np.mean(mc_array[1]):.2f}, Std={np.std(mc_array[1]):.2f}")
     print(f"  Ch2 (Laplacian): Mean={np.mean(mc_array[2]):.2f}, Std={np.std(mc_array[2]):.2f}")
     print(f"  Ch3 (Gabor):     Mean={np.mean(mc_array[3]):.2f}, Std={np.std(mc_array[3]):.2f}")
+
+# Convenience alias for router
+extract_multi_parametric_maps = extract_multichannel_volume
+
+SPECTRAL_CHANNELS = [
+    {"index": 0, "name": "Intensity", "description": "Normalized anatomical scan intensity", "colormap": "gray"},
+    {"index": 1, "name": "Sobel Gradient", "description": "3D Spatial anatomical edge magnitude", "colormap": "magma"},
+    {"index": 2, "name": "Laplacian Curvature", "description": "Tissue curvature and ridge transitions", "colormap": "viridis"},
+    {"index": 3, "name": "Perfusion Gabor", "description": "Multi-parametric tissue texture response", "colormap": "inferno"},
+]

@@ -4,6 +4,13 @@ from pydantic import BaseModel, Field
 
 
 # --- Ingestion & MPR Models ---
+class WindowLevelPreset(BaseModel):
+    name: str
+    window_width: float
+    window_center: float
+    description: str
+
+
 class ScanMetadataSchema(BaseModel):
     file_name: str
     shape: List[int]
@@ -14,6 +21,8 @@ class ScanMetadataSchema(BaseModel):
     mean_intensity: float
     std_intensity: float
     data_type: str
+    snr_db: Optional[float] = None
+    quality_grade: Optional[str] = "Grade A"
 
 
 class VoxelProbeRequest(BaseModel):
@@ -23,18 +32,37 @@ class VoxelProbeRequest(BaseModel):
     x: int
 
 
+class VoxelProbeResponse(BaseModel):
+    file_id: str
+    voxel_coords: List[int]
+    intensity_value: float
+    hounsfield_unit: Optional[float] = None
+    tissue_estimate: str
+
+
 # --- Preprocessing Models ---
 class PreprocessRequest(BaseModel):
     file_id: str
     target_spacing: List[float] = Field(default=[1.0, 1.0, 1.0])
     intensity_norm: str = Field(default="z_score")
+    apply_histogram_eq: bool = Field(default=False)
+
+
+class PreprocessResponse(BaseModel):
+    status: str
+    original_file_id: str
+    preprocessed_file_id: str
+    original_shape: List[int]
+    new_shape: List[int]
+    target_spacing: List[float]
+    elapsed_seconds: float
 
 
 # --- 3D AI Segmentation Models ---
 class SegmentRequest(BaseModel):
     file_id: str
     engine: str = Field(default="totalsegmentator", description="Engine: 'totalsegmentator' or 'monai_unet'")
-    target_structure: str = Field(default="heart", description="Organ to segment: 'heart', 'liver', etc.")
+    target_structure: str = Field(default="heart", description="Organ to segment: 'heart', 'liver', 'brain', 'lungs', etc.")
 
 
 class SegmentationResponse(BaseModel):
@@ -44,6 +72,8 @@ class SegmentationResponse(BaseModel):
     target_structure: str
     volume_cm3: float
     voxel_count: int
+    lavi_risk_index: Optional[str] = None
+    elapsed_seconds: float
 
 
 # --- Cloud 3D Digital Twin Models ---
@@ -57,12 +87,13 @@ class Cloud3DModelMetadata(BaseModel):
     provider: str
     features: List[str]
     clinical_landmarks: List[str]
+    clinical_focus: str
 
 
 class Cloud3DCatalogResponse(BaseModel):
     status: str
     total_models: int
-    catalog: Dict[str, Cloud3DModelMetadata]
+    catalog: Dict[str, Any]
 
 
 # --- Image Registration Models ---
@@ -70,6 +101,7 @@ class RegisterRequest(BaseModel):
     fixed_file_id: str
     moving_file_id: str
     transform_type: str = Field(default="Euler3D", description="Euler3D or Affine")
+    metric: str = Field(default="MeanSquares", description="MeanSquares or MattesMutualInformation")
 
 
 class RegisterResponse(BaseModel):
@@ -79,6 +111,19 @@ class RegisterResponse(BaseModel):
     initial_metric: float
     final_metric: float
     elapsed_seconds: float
+
+
+# --- Multi-Parametric Spectral Models ---
+class SpectralExtractRequest(BaseModel):
+    file_id: str
+
+
+class SpectralExtractResponse(BaseModel):
+    status: str
+    file_id: str
+    channels: List[str]
+    tissue_viability_index: float
+    perfusion_score: float
 
 
 # --- Quantitative Metrics Models ---
@@ -122,6 +167,16 @@ class DiagnosticReportSchema(BaseModel):
     quantitative_summary: Dict[str, Any]
     recommendations: List[str]
     disclaimer: str
+
+
+# --- Quality, Safety & Stress Models ---
+class ScanValidateRequest(BaseModel):
+    file_id: str
+
+
+class StressTestRequest(BaseModel):
+    file_id: str
+    noise_levels: List[float] = [0.05, 0.1, 0.2]
 
 
 # --- Cloud Sync Models ---

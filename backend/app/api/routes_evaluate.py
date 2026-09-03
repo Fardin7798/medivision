@@ -1,6 +1,7 @@
 """Evaluation and clinical metrics API endpoints."""
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException
+from backend.app.domain.schemas import EvaluateRequest
 from backend.app.services.metrics_service import compute_segmentation_metrics, evaluate_mask_files
 from backend.app.services.data_service import load_medical_image
 from backend.app.api.routes_data import FILE_REGISTRY
@@ -8,12 +9,11 @@ from backend.app.api.routes_data import FILE_REGISTRY
 router = APIRouter(prefix="/api", tags=["Evaluation"])
 
 @router.post("/evaluate")
-def evaluate_segmentation(payload: dict = Body(...)):
+def evaluate_segmentation(payload: EvaluateRequest):
     """Compute clinical segmentation metrics (Dice, IoU, HD95, ASD) comparing prediction to ground truth."""
-    pred_id = payload.get("pred_mask_id")
-    gt_id = payload.get("gt_mask_id")
+    pred_id = payload.pred_mask_id
+    gt_id = payload.gt_mask_id
 
-    # If gt_id is not specified, use synthetic ground truth if available
     if not gt_id:
         synth_lbl = Path("./data/synthetic/synthetic_heart_label.nii.gz")
         if synth_lbl.is_file():
