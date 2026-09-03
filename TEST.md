@@ -105,6 +105,13 @@ python3 -m backend.app.services.spectral_service
 ```
 **✅ RUN on 2026-09-03, real result:** 4-Channel spectral volume (4, 48, 48, 48) generated and per-channel z-score normalized to exact zero-mean and unit-variance.
 
+### 6.8 Clinical AI Diagnostic Report Smoke Test
+```bash
+# Test structured diagnostic report generation, Left Atrial Enlargement grading & Markdown export
+python3 -m backend.app.services.report_service
+```
+**✅ RUN on 2026-09-03, real result:** Diagnostic report generated with Left Atrial Enlargement classification, volumetric biomarkers, sphericity index, and full Markdown export format.
+
 ## 7. External Dependency Reachability Test
 
 ### 7.1 MSD Task02_Heart S3 Bucket
