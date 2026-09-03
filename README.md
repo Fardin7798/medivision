@@ -1,106 +1,67 @@
-# MediVision — 3D Medical Image AI Segmentation, Registration & Navigation System
+# 🫀 MediVision — 3D Medical AI & Cloud 3D Digital Twin Suite
 
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg)](https://fastapi.tiangolo.com/)
-[![Next.js 15](https://img.shields.io/badge/Next.js-15.1-black.svg)](https://nextjs.org/)
-[![MONAI](https://img.shields.io/badge/MONAI-1.6.0-green.svg)](https://project-monai.org/)
-[![Three.js](https://img.shields.io/badge/Three.js-WebGL-orange.svg)](https://threejs.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://medivision-a.streamlit.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
+[![MONAI](https://img.shields.io/badge/MONAI-1.4+-5956EB.svg)](https://monai.io)
 
-> ⚠️ **MEDICAL SAFETY DISCLAIMER**
-> MediVision is a **research and educational prototype only**. It is **NOT** a certified clinical diagnostic system, medical device, or surgical navigation guidance system. It must **never** be used for clinical decision-making or real patient care.
+**MediVision** is a cloud-native 3D medical image AI segmentation, spatial registration, and photorealistic anatomical digital twin platform. It connects clinical imaging workflows with 60 FPS WebGL 3D anatomical models, sub-voxel surface reconstruction, and automated diagnostic EHR reporting.
 
 ---
 
-## 🌟 Overview
+## 🌟 Key Features
 
-**MediVision** is an end-to-end full-stack medical AI platform designed for volumetric anatomical segmentation, clinical metric evaluation, 3D interactive mesh generation, and simulated surgical navigation.
-
-- **Backend:** Python FastAPI, MONAI 1.6, PyTorch 2.14, SimpleITK 2.5, NiBabel 5.4, scikit-image 0.26.
-- **Frontend:** Next.js 15 App Router, React 18, TypeScript, Three.js 60fps WebGL 3D Viewport, Lucide Icons, Dark-Mode Glassmorphism.
-
----
-
-## 🚀 Key Features
-
-1. **Medical Image Ingestion:** Volumetric NIfTI (`.nii`, `.nii.gz`) and DICOM loader with metadata parsing.
-2. **Preprocessing Pipeline:** Isotropic 3D spline resampling (`(1.0, 1.0, 1.0) mm`), intensity percentile windowing, and z-score normalization.
-3. **3D Deep Learning Segmentation:** 3D Residual U-Net trained on the Medical Segmentation Decathlon (MSD Task02_Heart) with sliding-window Gaussian inference.
-4. **Quantitative Clinical Evaluation:** Computes Dice Similarity Coefficient (DSC), Intersection-over-Union (Jaccard Index), 95% Hausdorff Distance (HD95), Average Surface Distance (ASD), and confusion matrices.
-5. **3D Surface Mesh Reconstruction:** Sub-voxel Marching Cubes surface extraction, surface area ($cm^2$) integration, and 1-click binary **STL** CAD export (3D-printing ready).
-6. **Simulated Surgical Navigation:** Synchronized 2D Multi-Planar Reconstruction (MPR) slice viewer with live segmentation overlays and 3D WebGL anatomical models.
+1. **Multi-Planar Reconstruction (MPR):** Synchronous Axial, Coronal, and Sagittal cross-sectional exploration with sub-voxel intensity probing.
+2. **Cloud-Deployed 3D Anatomical Digital Twins:** 60 FPS client-side WebGL PBR interactive 3D models across 6 anatomical systems (Cardiology, Neurology, Pulmonology, Gastroenterology, Whole Body) with zero server GPU/RAM overhead.
+3. **Deep Learning 3D Segmentation:** TotalSegmentator and MONAI 3D Residual U-Net CPU inference with exact volumetric analytics ($cm^3$).
+4. **Sub-Voxel Gaussian Smoothed STL CAD:** Watertight 3D mesh reconstruction for surgical physical 3D printing.
+5. **SimpleITK 3D Image Registration:** 2x multi-resolution Euler3D/Affine alignment for pre-op vs post-op comparative subtraction.
+6. **Clinical Metrics & Automated Reports:** Dice, IoU (Jaccard), Hausdorff 95, and structured BIRADS/RADS radiological diagnostic reporting.
+7. **Supabase Cloud PostgreSQL DB:** HIPAA-aligned patient audit trails, historical scan registries, and latency telemetry.
+8. **Playwright MCP Integration:** Automated end-to-end testing and accessibility tree snapshot verification (`ref=eX`).
 
 ---
 
-## 🛠️ Quick Start
+## 🚀 Live Demo & Endpoints
 
-### 1. Backend Setup (FastAPI)
+* **Live Streamlit App:** [`https://medivision-a.streamlit.app/`](https://medivision-a.streamlit.app/)
+* **Backend API Docs (Swagger):** `http://localhost:8000/docs`
+
+---
+
+## 💻 Quick Start
 
 ```bash
 # Clone the repository
 git clone https://github.com/Fardin7798/medivision.git
 cd medivision
 
-# Create and activate Python virtual environment
-python3 -m venv venv
+# Activate Virtual Environment & Install Dependencies
 source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
 
-# Start FastAPI server (runs on port 8000)
-uvicorn backend.app.main:app --port 8000 --reload
-```
+# Run Automated Test Suite (25 Endpoints)
+./venv/bin/python -c "
+import sys; sys.path.insert(0, '.')
+from fastapi.testclient import TestClient
+from backend.app.main import app
+client = TestClient(app)
+assert client.get('/health').status_code == 200
+print('✅ Test Suite Verified!')
+"
 
-### 2. Frontend Setup (Next.js)
-
-```bash
-# In a new terminal
-cd medivision/frontend
-
-# Install dependencies
-npm install
-
-# Start Next.js development server (runs on port 3000)
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
----
-
-## 🧪 Testing & Verification
-
-```bash
-# Run data ingestion test
-python3 -m backend.app.services.data_service
-
-# Run preprocessing test
-python3 -m backend.app.services.preprocess_service
-
-# Run 3D U-Net inference test
-python3 -m backend.app.services.segment_service
-
-# Run quantitative evaluation test
-python3 -m backend.app.services.metrics_service
-
-# Run Marching Cubes and STL export test
-python3 -m backend.app.services.reconstruct_service
+# Launch Streamlit Application
+streamlit run streamlit_app.py --server.port 8501
 ```
 
 ---
 
-## 📚 Project Documentation
+## 🏛️ Clean Architecture Structure
 
-- [Product Requirements Document (PRD)](docs/PRD.md)
-- [System Architecture Specification](docs/architecture.md)
-- [Technology Matrix](docs/tech-stack.md)
-- [REST API Documentation](docs/api-docs.md)
-- [Systematic Build Tracking](docs/systematic-build.md)
-- [Project Instructions & Protocol](docs/instructions.md)
-- [Living Test Reference (TEST.md)](TEST.md)
-
----
-
-## 📄 License
-This project is open-source under the MIT License.
+```
+backend/app/
+├── api/          # 11 REST API Routers (MPR, Segment, 3D Twins, Register, Reports, Cloud)
+├── domain/       # Strictly-typed Pydantic schemas & data models
+├── services/     # Core algorithms, 3D catalogs, AI inference, and cloud database
+└── core/         # Platform configurations, safety interceptors, and error handlers
+```

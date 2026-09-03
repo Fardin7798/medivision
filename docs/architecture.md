@@ -1,84 +1,55 @@
-# Architecture & Component Specification — MediVision
+# MediVision — System Architecture Document
 
-> Comprehensive System Architecture and Dataflow for MediVision (3D Medical AI Suite).
+> Comprehensive technical blueprint for the MediVision 3D Medical AI & Anatomical Digital Twin Platform.
 
 ---
 
-## 1. High-Level System Architecture
+## 1. High-Level Architecture Overview
+
+MediVision follows a **Clean, Cloud-Native Layered Architecture** connecting client-side WebGL viewports, a FastAPI API Gateway, deep learning microservices, and cloud databases.
 
 ```mermaid
 graph TD
-    subgraph "Client Layer"
-        UI_Streamlit["Streamlit Cloud UI (medivision-a.streamlit.app)"]
-        UI_NextJS["Next.js 15 Web Application (frontend/)"]
-        Cloud_3D["Cloud 3D Medical Digital Twin Viewport (WebGL 60fps)"]
+    Client[Next.js 15 / Streamlit WebGL Client] -->|REST / JSON-RPC| Gateway[FastAPI Clean API Gateway]
+    
+    subgraph FastAPI Core
+        Gateway --> Routes[API Routers: 11 Endpoints]
+        Routes --> Domain[Domain Schemas: Pydantic v2]
+        Routes --> Services[Application Business Services]
+    end
+    
+    subgraph Cloud Infrastructure & AI
+        Services -->|60 FPS WebGL PBR| Cloud3D[Cloud 3D Digital Twin Engine<br/>BioDigital / Sketchfab]
+        Services -->|SQL / REST| Supabase[Supabase Cloud PostgreSQL]
+        Services -->|Decathlon Scans| HFHub[Hugging Face Dataset Hub]
+        Services -->|CPU-Optimized Inference| AIModel[MONAI / TotalSegmentator Core]
+        Services -->|Euler3D Alignment| SimpleITK[SimpleITK 2x Registration]
     end
 
-    subgraph "Cloud 3D Model Catalog"
-        Model_Heart["3D Animated 4K Beating Heart (Sketchfab / NIH 3D)"]
-        Model_Chambers["Labelled 4-Chamber Cardiac Dissection"]
-        Model_Brain["Deep Brain Internal Structures Scan"]
-        Model_Lungs["Animated Respiratory Tree & Cross-Section"]
-        Model_Liver["Abdominal Cavity CT Scan Model"]
+    subgraph Testing & QA Automation
+        Playwright[Playwright MCP Server] -->|Accessibility Snapshots ref=eX| Client
     end
-
-    subgraph "Core AI & Processing Engine (CPU-Optimized)"
-        Ingest["Data Ingestion & NiBabel Volumetric Parser"]
-        SplinePrep["Isotropic Spline 3D Resampling & Normalization"]
-        AI_TotalSeg["TotalSegmentator Universal Pretrained Engine (roi_subset)"]
-        AI_MONAI["MONAI 3D Residual U-Net Engine"]
-        Metrics["Clinical Validation Metrics (Dice, IoU, HD95, ASD)"]
-        Register["2x Multi-Resolution SimpleITK Registration"]
-        ReportGen["AI Diagnostic Report & Biomarker Generator (LAVI, Sphericity)"]
-        Safety["Clinical Safety Interceptors & Noise Testing"]
-    end
-
-    subgraph "Cloud Persistence & Telemetry"
-        DB_Supabase[("Supabase PostgreSQL Database")]
-        Dataset_MSD[("Medical Segmentation Decathlon la_003 3D Cardiac MRI")]
-    end
-
-    UI_Streamlit --> Ingest
-    UI_Streamlit --> Cloud_3D
-    Cloud_3D --- Model_Heart
-    Cloud_3D --- Model_Chambers
-    Cloud_3D --- Model_Brain
-    Cloud_3D --- Model_Lungs
-    Cloud_3D --- Model_Liver
-
-    Ingest --> Dataset_MSD
-    Ingest --> SplinePrep
-    SplinePrep --> AI_TotalSeg
-    SplinePrep --> AI_MONAI
-    AI_TotalSeg --> Metrics
-    AI_MONAI --> Metrics
-    Metrics --> ReportGen
-    ReportGen --> DB_Supabase
 ```
 
 ---
 
-## 2. Core Subsystems
+## 2. Core Subsystems & Responsibilities
 
-### Subsystem 1: Clinical Dataset & Ingestion
-* **Real Patient Ingestion:** Loads Medical Segmentation Decathlon (`Task02_Heart`) patient MRI scans (`.nii.gz`) with spatial affine matrices and anisotropic pixdim spacing.
-* **Pre-processing:** Resamples scan to 1.0mm isotropic resolution using third-order spline interpolation and applies float32 z-score normalization.
+### 1. Presentation & API Gateway (`backend/app/api/`)
+* **Data & Slices (`routes_data.py`):** Multi-Planar Reconstruction (MPR) orthogonal slice extraction across Axial, Coronal, and Sagittal planes with voxel intensity probing.
+* **Preprocessing (`routes_preprocess.py`):** 3D cubic spline reslicing to isotropic spacing ($1.0 \times 1.0 \times 1.0 \text{ mm}$) and intensity z-score normalization.
+* **3D Segmentation (`routes_segment.py`):** AI-powered multi-organ anatomical segmentation with volume calculation in $cm^3$.
+* **Cloud 3D Digital Twins (`routes_reconstruct.py`):** Real-time catalog and 60 FPS WebGL iframe embeds for 6 anatomical systems.
+* **Image Registration (`routes_register.py`):** Multi-resolution Euler3D/Affine alignment with Mean Squares and Mattes Mutual Information metrics.
+* **Clinical Metrics (`routes_evaluate.py`):** Quantitative validation against ground truth (Dice, IoU, HD95, ASD).
+* **Clinical Reports (`routes_report.py`):** Automated diagnostic report generation formatted for radiologist EHR review.
+* **Cloud Telemetry (`routes_cloud.py`):** Asynchronous telemetry sync and patient audit logging with Supabase Cloud.
 
-### Subsystem 2: Dual-Engine 3D AI Segmentation
-* **TotalSegmentator Universal Engine:** Targeted `roi_subset` (heart, aorta, liver, spleen, kidneys) running on CPU with zero thread contention (`OMP_NUM_THREADS=1`).
-* **MONAI 3D Residual U-Net:** Sliding-window Gaussian inference with Hugging Face Hub pretrained weights (`ashhal/medivision-unet-heart`).
+### 2. Domain Entities (`backend/app/domain/`)
+* Strongly typed Pydantic models ensuring complete contract safety between frontend, backend, and external cloud APIs.
 
-### Subsystem 3: Cloud-Deployed 3D Anatomical Digital Twin Suite
-* **Zero-Lag 60fps WebGL Rendering:** Eliminates server-side rendering bottlenecks by connecting directly to cloud-hosted, textured, and animated 3D medical assets.
-* **Specialties Covered:**
-  1. **Cardiovascular:** 4K Animated beating heart with coronary vessels and 4-chamber labeled cardiac dissection.
-  2. **Neurology:** Human brain with selectable internal structure dissection (Thalamus, Ventricles, Hippocampus).
-  3. **Pulmonology:** Animated breathing respiratory tree with directional airflow cross-section.
-  4. **Gastroenterology:** Abdominal cavity multi-organ CT 3D model and human liver donor scan.
+### 3. Cloud 3D Digital Twin Engine (`backend/app/services/reconstruct_service.py`)
+* Serves photorealistic, interactive 3D anatomical models (Cardiology, Neurology, Pulmonology, Gastroenterology, Whole Body) directly from cloud CDN with 0 MB server GPU load.
 
-### Subsystem 4: AI Diagnostic Reporting & Quantitative Biomathematics
-* **Automated Biomarkers:** Left Atrial Volume ($cm^3$), Left Atrial Volume Index ($LAVI\ ml/m^2$), Sphericity Index, and Hausdorff 95 boundary error.
-* **Standardized Diagnostic Impression:** Grades Left Atrial Enlargement (LAE) according to AHA/ESC guidelines and generates printable clinical markdown reports.
-
-### Subsystem 5: Supabase Cloud Telemetry
-* **Synchronous Audit Logging:** Records patient demographics, scan metadata, segmentation volumetrics, and validation metrics to remote PostgreSQL (`aluzqooagiymysssnhkg.supabase.co`).
+### 4. Quality & Testing Interceptors (`TEST.md` & Playwright MCP)
+* Automated 25-endpoint smoke tests, Gaussian noise stress testing, scan integrity validation, and end-to-end accessibility tree testing.
