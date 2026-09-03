@@ -154,8 +154,8 @@ elif module == "2. 3D U-Net AI Segmentation":
     engine_choice = col_e1.selectbox(
         "🤖 Select AI Segmentation Engine",
         [
-            "TotalSegmentator Universal Engine (Pretrained Whole Heart & Multi-Organ)",
-            "MONAI 3D Residual U-Net (Custom Sliding-Window Model)"
+            "MONAI 3D Residual U-Net (Hugging Face Pretrained - Instant & Cloud-Optimized)",
+            "TotalSegmentator Universal Engine (Pretrained Whole Heart & Multi-Organ)"
         ],
         index=0
     )

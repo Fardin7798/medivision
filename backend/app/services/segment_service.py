@@ -215,6 +215,13 @@ def run_totalsegmentator_inference(
         tmp_out = tempfile.NamedTemporaryFile(suffix=".nii.gz", delete=False)
         output_path = tmp_out.name
 
+        # Configure single-thread environment to prevent subprocess forks in Streamlit/Cloud
+        os.environ["nnUNet_n_proc_DA"] = "0"
+        os.environ["TOTALSEG_DISABLE_STATISTICS"] = "1"
+        os.environ["OMP_NUM_THREADS"] = "1"
+        os.environ["MKL_NUM_THREADS"] = "1"
+        os.environ["OPENBLAS_NUM_THREADS"] = "1"
+
         if TOTAL_SEGMENTATOR_AVAILABLE:
             try:
                 # heartchambers_highres task does not support fast=True in upstream TotalSegmentator
