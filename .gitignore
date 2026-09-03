@@ -45,3 +45,8 @@ models/
 Thumbs.db
 .idea/
 .vscode/
+
+# Agent Customizations & Vercel Metadata
+.agents/
+.vercel/
+frontend/.vercel/
