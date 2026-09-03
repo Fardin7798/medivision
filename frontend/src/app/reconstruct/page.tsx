@@ -68,7 +68,7 @@ export default function ReconstructPage() {
 
   const handleDownloadSTL = () => {
     if (!meshResult) return;
-    window.open(`http://localhost:8000${meshResult.stl_download_url}`, "_blank");
+    window.open(`${API_BASE_URL}${meshResult.stl_download_url}`, "_blank");
   };
 
   return (
