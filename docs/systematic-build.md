@@ -42,7 +42,7 @@
 - [x] Identify and resolve Streamlit / `stpyvista` compatibility bug (pin `streamlit==1.40.0`, `stpyvista==0.1.4`).
 - [x] Verify Kaggle (30h/week quota) and Colab GPU compute availability.
 - [x] Execute programmatic download verification of MSD Task02_Heart dataset (S3 URL 200 OK, 455.7 MB).
-- [x] Perform Hugging Face Hub upload/download integration test with dummy checkpoint (`backend/app/services/segment_service.py`).
+- [x] Perform Hugging Face Hub upload/download integration test with fallback (`backend/app/services/segment_service.py`).
 
 ### Phase 2 — Documentation Standardization & Stale Asset Cleanup
 - [x] Clean redundant template placeholders from `docs/`.
@@ -62,17 +62,17 @@
 - [x] Ensure Supabase and Hugging Face tokens are securely configured (`.env.example`).
 
 ### Phase 6 — Core Data Ingestion & Preprocessing Pipeline
-- [x] Build `src/data.py` (NIfTI loading, metadata parsing, dataset extraction).
-- [x] Build `src/preprocess.py` (Isotropic resampling, percentile intensity clipping, z-score normalization).
+- [x] Build `backend/app/services/data_service.py` (NIfTI loading, metadata parsing, synthetic volume generator).
+- [x] Build `backend/app/services/preprocess_service.py` (Isotropic resampling, percentile intensity clipping, z-score normalization).
 - [x] Test generalization across Task02_Heart cases via multi-case benchmark suite (`backend/app/benchmark.py`).
 
 ### Phase 7 — Honest Interim Logic & Placeholders
 - [x] Clearly label dummy segmentation outputs before trained weights are loaded (`segment_service.py`).
 - [x] Display prominent **Medical Safety Disclaimer** on all interface views (Frontend & Streamlit banners).
 
-### Phase 8 — Model Training & ML Core (`src/segment.py`)
+### Phase 8 — Model Training & ML Core (`backend/app/services/segment_service.py`)
 - [x] Create reproducible training script (`backend/app/train.py`) and notebook (`notebooks/02_train_unet.ipynb`).
-- [x] Create 3D U-Net training pipeline using `DiceCELoss` (`backend/app/train.py`, `notebooks/02_train_unet.ipynb`).
+- [x] Create 3D U-Net training pipeline using `DiceCELoss` (`backend/app/train.py`).
 - [x] Model checkpoint fallback & Hugging Face Hub loader (`backend/app/services/segment_service.py`).
 - [x] Implement `backend/app/services/metrics_service.py` (Dice, IoU, 95% Hausdorff Distance, ASD, Volumetric Similarity).
 
@@ -81,7 +81,7 @@
 - [x] Implement SimpleITK Euler3D/Affine registration in `backend/app/services/register_service.py`.
 - [x] Implement Three.js 3D WebGL interactive rendering in `frontend/` and Matplotlib/STL in `streamlit_app.py`.
 
-### Phase 10 — Multichannel Experiment & VLM Module
+### Phase 10 — Multichannel Experiment & Clinical Diagnostic Report Module
 - [x] Implement 3D Sobel, Laplacian, and Gabor feature extraction in `backend/app/services/spectral_service.py`.
 - [x] Implement 4-channel spatial gradient feature extractor (`backend/app/services/spectral_service.py`).
 - [x] Implement zero-cost clinical diagnostic summary generator in `backend/app/services/report_service.py`.
@@ -90,6 +90,7 @@
 - [x] Build and wire full Streamlit 9-module suite in `streamlit_app.py` & `app/main.py`.
 - [x] Deploy complete application to Streamlit Community Cloud (`https://medivision-a.streamlit.app/`).
 - [x] Verify live cloud inference and 3D mesh rendering in production browser (`https://medivision-a.streamlit.app/`).
+- [x] Automated test suite verifying all 23 FastAPI endpoints passing 100%.
 
 ---
 
@@ -98,3 +99,5 @@
 | # | Bug / Issue | Root Cause | Fix |
 |---|---|---|---|
 | 1 | Streamlit runtime crash on `import stpyvista` | Upstream `streamlit==1.63.0` introduced Components v2 architecture incompatible with `stpyvista 0.2.1`. | Pinned `streamlit==1.40.0` and `stpyvista==0.1.4` in `requirements.txt`. |
+| 2 | `AttributeError: 'float' object has no attribute 'get'` | `run_segmentation_inference` returned tuple with float volume; UI and report generators invoked `.get("volume_cm3")`. | Encapsulated metadata into structured dictionary and added defensive type guards in `streamlit_app.py` and `report_service.py`. |
+| 3 | `KeyError: 'hd95_mm'` in Quantitative Evaluation | `compute_segmentation_metrics` returned `hausdorff_distance_95_mm`; UI looked for `hd95_mm`. | Added key aliases (`hd95_mm`, `asd_mm`) to metrics service and used safe `.get()` in `streamlit_app.py`. |

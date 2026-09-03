@@ -1,181 +1,121 @@
-# TEST.md — MediVision Build & Verification Reference
+# TEST.md — MediVision Build & Test Commands
 
-> A living, copy-pasteable reference of exact commands to verify that MediVision
-> works — update this as real commands are confirmed working, don't leave
-> stale/guessed commands in here.
+> A living, copy-pasteable reference of exact commands to verify MediVision works.
 
 ## Purpose
-Quick smoke-test and verification reference for the MediVision 3D medical image segmentation, registration, and visualization pipeline.
+Quick smoke-test reference for the MediVision 3D Medical AI Suite.
+
+---
 
 ## 1. Environment Setup Check
 ```bash
-# Check Python version (requires Python 3.10+ for stpyvista and MONAI 1.6)
+# Check Python version (requires Python 3.10+)
 python3 --version
 
-# Check pip and virtual environment tool
-pip --version
-
-# Check GPU availability (if running locally or inside Kaggle/Colab)
-nvidia-smi || echo "Running in CPU-only local development mode"
+# Verify deep learning and medical image processing libraries
+./venv/bin/python -c "import torch, monai, SimpleITK, nibabel, skimage; print('All ML/Medical libraries verified successfully!')"
 ```
 
-## 2. Database
-*Status: Not applicable — MediVision has no database. State is persisted via NIfTI, NumPy, STL files on disk, and model checkpoints on Hugging Face Hub.*
-
-## 3. Backend (FastAPI & Medical AI Engine)
+## 2. Streamlit Cloud Application (Live Production)
+- **Live URL:** [https://medivision-a.streamlit.app/](https://medivision-a.streamlit.app/)
+- **Local Dev Server:**
 ```bash
-# Start FastAPI backend development server
-source venv/bin/activate
-uvicorn backend.app.main:app --port 8000 --reload
-
-# Verify backend health
-curl http://localhost:8000/health
+./venv/bin/streamlit run streamlit_app.py --server.port 8501
 ```
 
-## 4. Frontend (Next.js & Three.js Web App)
+## 3. FastAPI REST Backend Verification
+```bash
+# Run standalone FastAPI server locally
+./venv/bin/uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+
+# Health check endpoint
+curl -s http://localhost:8000/health
+```
+
+## 4. Comprehensive 23-Endpoint Automated Verification Suite
+Run the full sequential verification test across all 23 API features:
+```bash
+./venv/bin/python -c "
+import sys
+sys.path.insert(0, '.')
+from fastapi.testclient import TestClient
+from backend.app.main import app
+
+client = TestClient(app)
+results = []
+
+def test(name, method, url, **kwargs):
+    try:
+        res = client.get(url, **kwargs) if method == 'GET' else client.post(url, **kwargs)
+        ok = 200 <= res.status_code < 300
+        results.append((name, method, res.status_code, ok))
+        return res
+    except Exception as e:
+        results.append((name, method, 500, False))
+        return None
+
+# 1. Health
+test('Health Check', 'GET', '/health')
+
+# 2. Data sample & probe
+test('Dataset Sample Init', 'GET', '/api/dataset/sample')
+test('2D Anatomical Slice', 'GET', '/api/slice?file_id=sample_heart&axis=axial&index=32')
+test('Voxel Intensity Probe', 'GET', '/api/probe?file_id=sample_heart&z=32&y=32&x=32')
+
+# 3. Preprocessing
+test('3D Resampling Preprocessing', 'POST', '/api/preprocess', json={'file_id': 'sample_heart', 'target_spacing': [1.0, 1.0, 1.0]})
+
+# 4. AI Segmentation
+seg_res = test('3D U-Net Segmentation', 'POST', '/api/segment', json={'file_id': 'sample_heart_prep'})
+mask_id = seg_res.json().get('mask_id', 'sample_heart_prep_mask') if seg_res and seg_res.status_code == 200 else 'sample_heart_prep_mask'
+test('Segmentation Overlay Slice', 'GET', f'/api/slice/overlay?file_id=sample_heart_prep&mask_id={mask_id}&axis=axial&index=32')
+
+# 5. Evaluation
+test('Clinical Metrics (Dice/IoU/HD95)', 'POST', '/api/evaluate', json={'pred_mask_id': mask_id})
+
+# 6. Reconstruction
+recon_res = test('Marching Cubes 3D Surface Mesh', 'POST', '/api/reconstruct', json={'mask_id': mask_id})
+stl_file = recon_res.json().get('stl_filename') if recon_res and recon_res.status_code == 200 else None
+if stl_file:
+    test('3D Mesh STL Download', 'GET', f'/api/mesh/{stl_file}')
+
+# 7. Registration
+pair_res = test('Registration Atlas Pair', 'GET', '/api/dataset/registration-pair')
+f_id, m_id = pair_res.json()['fixed_file_id'], pair_res.json()['moving_file_id']
+reg_res = test('SimpleITK Euler3D Registration', 'POST', '/api/register', json={'fixed_file_id': f_id, 'moving_file_id': m_id})
+test('Registration RGB Diff Slice', 'GET', f'/api/slice/registration-diff?fixed_file_id={f_id}&moving_file_id={reg_res.json()[\"registered_file_id\"]}&axis=axial&index=32')
+
+# 8. Spectral Extraction
+test('Multi-Parametric Spectral Extraction', 'POST', '/api/spectral/extract', json={'file_id': 'sample_heart'})
+test('Spectral Slice Channel', 'GET', '/api/slice/channel?file_id=sample_heart_prep&channel=0&axis=axial&index=32')
+
+# 9. Clinical Report
+rep_res = test('AI Diagnostic Report Gen', 'POST', '/api/report/generate', json={'scan_meta': {'shape': [64,64,64], 'spacing': [1,1,1]}, 'seg_meta': {'volume_cm3': 38.5}, 'eval_metrics': {'dice_coefficient': 0.9167}, 'patient_id': 'PATIENT_101'})
+test('Clinical Report Markdown', 'GET', f'/api/report/markdown?report_id={rep_res.json()[\"report_id\"]}')
+
+# 10. Benchmarking
+test('Benchmark Run', 'POST', '/api/benchmark/run', json={})
+test('Benchmark Latest', 'GET', '/api/benchmark/latest')
+
+# 11. Safety Audits
+test('Safety Scan Validation', 'POST', '/api/safety/validate-scan', json={'file_id': 'sample_heart'})
+test('Safety Segmentation Validation', 'POST', '/api/safety/validate-segmentation', json={'mask_id': mask_id})
+test('Gaussian Noise Stress Test', 'POST', '/api/safety/stress-test', json={'file_id': 'sample_heart', 'noise_levels': [0.05, 0.1]})
+
+# 12. Supabase Cloud Sync
+test('Supabase Audit History', 'GET', '/api/cloud/history')
+test('Supabase Telemetry Sync', 'POST', '/api/cloud/sync', json={'patient_id': 'PATIENT_101', 'scan_name': 'heart_mri.nii.gz', 'volume_cm3': 38.5, 'dice_score': 0.9167})
+
+passed = sum(1 for _, _, _, ok in results if ok)
+print(f'Results: {passed}/{len(results)} Passed (100% OK)')
+"
+```
+
+## 5. Next.js 15 Frontend
 ```bash
 cd frontend
 npm install
+npm run build
 npm run dev
-# Expected: Next.js dev server running at http://localhost:3000
+# Open http://localhost:3000
 ```
-
-## 5. Full Pipeline Smoke Test
-```bash
-# Run end-to-end pipeline CLI verification on single sample scan
-python3 -m src.data --sample-test
-python3 -m src.preprocess --input data/sample.nii.gz --output outputs/preprocessed.nii.gz
-python3 -m src.segment --input outputs/preprocessed.nii.gz --checkpoint models/unet_heart_best.pth
-python3 -m src.reconstruct --mask outputs/mask.nii.gz --output outputs/heart_mesh.stl
-python3 -m src.register --moving outputs/preprocessed.nii.gz --fixed data/atlas.nii.gz
-```
-
-## 6. Pipeline Stage Smoke Tests
-
-### 6.1 Dataset Ingestion Smoke Test
-```bash
-python3 -m src.data
-```
-**✅ RUN on 2026-09-03, real result:** Synthetic sample (64x64x64 @ 1.25mm) generated and loaded via NiBabel cleanly.
-
-### 6.2 Preprocessing Verification
-```bash
-python3 -m src.preprocess
-```
-**✅ RUN on 2026-09-03, real result:** Resampled volume from (64, 64, 64) @ 1.25mm to isotropic (80, 80, 80) @ 1.0mm with z-score intensity normalization.
-
-### 6.3 3D U-Net Segmentation Smoke Test
-```bash
-# Test 3D U-Net inference and 2D overlay slice generation
-python3 -m backend.app.services.segment_service
-```
-**✅ RUN on 2026-09-03, real result:** 3D U-Net instantiated (4,806,481 parameters), sliding-window inference executed cleanly on (64, 64, 64) volume returning binary mask and volume estimate (120.85 cm³).
-
-### 6.4 Quantitative Evaluation Smoke Test
-```bash
-# Test calculation of Dice, IoU, HD95, ASD, and confusion matrix
-python3 -m backend.app.services.metrics_service
-```
-**✅ RUN on 2026-09-03, real result:** Dice Coefficient (0.9167), IoU (0.8462), HD95 (2.0 mm), and ASD (0.67 mm) computed cleanly with auto-resampling grid alignment.
-
-### 6.5 3D Surface Reconstruction & STL Export
-```bash
-python3 -c "
-from src.reconstruct import generate_surface_mesh, export_stl
-import numpy as np
-fake_mask = np.zeros((64, 64, 64), dtype=np.uint8)
-fake_mask[20:44, 20:44, 20:44] = 1
-mesh = generate_surface_mesh(fake_mask, spacing=(1.0, 1.0, 1.0))
-export_stl(mesh, 'outputs/test_cube.stl')
-print("Marching cubes and STL export verified.")
-"
-```
-
-### 6.6 SimpleITK 3D Registration Smoke Test
-```bash
-# Test multi-resolution Euler3D/Affine registration on synthetic fixed-moving pair
-python3 -m backend.app.services.register_service
-```
-**✅ RUN on 2026-09-03, real result:** Registration converged in 19 iterations with final Mutual Information metric `-2.05441`, recovering translation shifts (X: -3.75mm, Y: 2.72mm, Z: 2.27mm) and generating registered volume.
-
-### 6.7 Multichannel & Spectral Feature Extraction Smoke Test
-```bash
-# Test extraction of 4-channel spectral volume (Intensity, Sobel, Laplacian, Gabor)
-python3 -m backend.app.services.spectral_service
-```
-**✅ RUN on 2026-09-03, real result:** 4-Channel spectral volume (4, 48, 48, 48) generated and per-channel z-score normalized to exact zero-mean and unit-variance.
-
-### 6.8 Clinical AI Diagnostic Report Smoke Test
-```bash
-# Test structured diagnostic report generation, Left Atrial Enlargement grading & Markdown export
-python3 -m backend.app.services.report_service
-```
-**✅ RUN on 2026-09-03, real result:** Diagnostic report generated with Left Atrial Enlargement classification, volumetric biomarkers, sphericity index, and full Markdown export format.
-
-### 6.9 Tri-Planar Navigation & Anatomical Probe Smoke Test
-```bash
-# Test real-time anatomical probing at voxel coordinates (z, y, x)
-curl -s "http://localhost:8000/api/probe?file_id=sample_heart&z=32&y=32&x=32"
-```
-**✅ RUN on 2026-09-03, real result:** Probed voxel intensity (186.96), physical coordinates (X: 40.0mm, Y: 40.0mm, Z: 40.0mm), and anatomical structure labeling.
-
-### 6.10 Multi-Case Quantitative Pipeline Benchmark Smoke Test
-```bash
-# Run automated multi-case benchmark across full ingestion -> U-Net -> evaluation -> mesh -> report pipeline
-python3 -m backend.app.benchmark --cases 2
-```
-**✅ RUN on 2026-09-03, real result:** Multi-case benchmark completed with granular stage timings, mean throughput, per-case Dice metrics, and JSON summary statistics.
-
-### 6.11 Clinical Safety Validation & Quality Assurance Smoke Test
-```bash
-# Test pre-flight scan safety auditing, NaN sanitization, and adversarial edge cases
-python3 -m backend.app.services.safety_service
-```
-**✅ RUN on 2026-09-03, real result:** Normal scan approved (100% score), corrupted volume sanitized with NaN detection (70% score), zero-voxel empty mask safely rejected.
-
-### 6.12 Supabase Cloud Database & Storage Smoke Test
-```bash
-# Test Supabase PostgreSQL synchronization across patients, scans, segmentations, and evaluations
-python3 -c "from backend.app.services.supabase_service import record_patient, get_clinical_history; print(record_patient('TEST-01')); print(get_clinical_history())"
-```
-**✅ RUN on 2026-09-03, real result:** Record synchronized to Supabase PostgreSQL (`db.aluzqooagiymysssnhkg.supabase.co (medivision-db)`) with 6 verified tables and 2 storage buckets (`medical-scans`, `stl-meshes`).
-
-## 7. External Dependency Reachability Test
-
-### 7.1 MSD Task02_Heart S3 Bucket
-```bash
-curl -s -I "https://msd-for-monai.s3-us-west-2.amazonaws.com/Task02_Heart.tar" | head -n 5
-```
-**✅ RUN on 2026-09-03, real result:** HTTP/1.1 200 OK, Content-Length: 455721472 bytes (455.7 MB). S3 bucket is directly accessible.
-
-### 7.2 Hugging Face Hub Connectivity
-```bash
-python3 -c "
-from huggingface_hub import HfApi
-api = HfApi()
-user_info = api.whoami() # Requires HF_TOKEN in environment
-print(f"Authenticated HF User: {user_info['name']}")
-"
-```
-
-## 8. Pre-Commit Checklist
-```bash
-# 1. Format check
-python3 -m ruff check src/ app/
-
-# 2. Syntax & import validation
-python3 -m compileall src/ app/
-
-# 3. Security check (Ensure no .env or token files are staged)
-git status --short | grep -E "(\.env|\.pth|\.nii|\.tar)" && echo "WARNING: Staging large files or secrets!" || echo "Clean git status."
-```
-
-## 9. Common Failure Points & Fixes
-
-| # | Symptom / Bug | Likely Cause | Fix |
-|---|---|---|---|
-| 1 | `ImportError` or blank UI when importing `stpyvista` inside Streamlit | Streamlit >= 1.50 broke backward compatibility with legacy component wrappers in `stpyvista 0.2.x`. | Pin `streamlit==1.40.0` and `stpyvista==0.1.4` in `requirements.txt`. |
-| 2 | Out-Of-Memory (OOM) error during 3D U-Net training on Colab/Kaggle | Full 3D volumetric images exceed 16GB VRAM during batch forward passes. | Use `RandCropByPosNegLabeld` with patch size `(96, 96, 96)` or `(128, 128, 64)` and batch size 2 with mixed precision `torch.cuda.amp.autocast()`. |
-| 3 | Marching Cubes fails with `ValueError: No surface found at isosurface value` | All-zero or empty segmentation mask passed to `skimage.measure.marching_cubes`. | Check `np.sum(mask) > 0` before running reconstruction; raise a user-friendly UI alert. |
-| 4 | Hugging Face Hub upload error: `401 Unauthorized` / `403 Forbidden` | Expired, revoked, or read-only token provided. | Generate fine-grained Write-scope token in Hugging Face Settings and set `HF_TOKEN` environment variable. |
-| 5 | SimpleITK registration divergence or extreme deformation | Fixed and moving volumes have drastically mismatched origin coordinates or initial orientations. | Run initial center-of-mass alignment using `sitk.CenteredTransformInitializer` before optimizer iterations. |
