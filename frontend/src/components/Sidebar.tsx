@@ -11,6 +11,7 @@ import {
   BarChart3,
   Layers,
   FileText,
+  Gauge,
   ShieldCheck,
 } from "lucide-react";
 
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { href: "/evaluate", label: "Clinical Evaluation", icon: BarChart3 },
   { href: "/multichannel", label: "Multichannel Features", icon: Layers },
   { href: "/report", label: "Radiologist Report", icon: FileText },
+  { href: "/benchmark", label: "Benchmark Suite", icon: Gauge },
 ];
 
 export default function Sidebar() {

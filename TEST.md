@@ -119,6 +119,13 @@ curl -s "http://localhost:8000/api/probe?file_id=sample_heart&z=32&y=32&x=32"
 ```
 **✅ RUN on 2026-09-03, real result:** Probed voxel intensity (186.96), physical coordinates (X: 40.0mm, Y: 40.0mm, Z: 40.0mm), and anatomical structure labeling.
 
+### 6.10 Multi-Case Quantitative Pipeline Benchmark Smoke Test
+```bash
+# Run automated multi-case benchmark across full ingestion -> U-Net -> evaluation -> mesh -> report pipeline
+python3 -m backend.app.benchmark --cases 2
+```
+**✅ RUN on 2026-09-03, real result:** Multi-case benchmark completed with granular stage timings, mean throughput, per-case Dice metrics, and JSON summary statistics.
+
 ## 7. External Dependency Reachability Test
 
 ### 7.1 MSD Task02_Heart S3 Bucket
