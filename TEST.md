@@ -138,7 +138,7 @@ python3 -m backend.app.services.safety_service
 # Test Supabase PostgreSQL synchronization across patients, scans, segmentations, and evaluations
 python3 -c "from backend.app.services.supabase_service import record_patient, get_clinical_history; print(record_patient('TEST-01')); print(get_clinical_history())"
 ```
-**✅ RUN on 2026-09-03, real result:** Record synchronized to Supabase PostgreSQL (`db.skvdpkidxoidlcurujup.supabase.co`) with 6 verified tables and 2 storage buckets (`medical-scans`, `stl-meshes`).
+**✅ RUN on 2026-09-03, real result:** Record synchronized to Supabase PostgreSQL (`db.aluzqooagiymysssnhkg.supabase.co (medivision-db)`) with 6 verified tables and 2 storage buckets (`medical-scans`, `stl-meshes`).
 
 ## 7. External Dependency Reachability Test
 
