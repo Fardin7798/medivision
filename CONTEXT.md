@@ -7,7 +7,7 @@
 ## Project Overview
 
 - **What it is:** MediVision is a lightweight, reproducible AI pipeline and interactive desktop/web interface that performs anatomical segmentation on 3D medical images (MSD Task02_Heart), converts binary segmentations into 3D interactive surface meshes, executes rigid/affine image registration (SimpleITK), and renders simulated surgical-navigation overlays with an optional local vision-language clinical report.
-- **Status:** Phase 3 (Evaluation) & Phase 4 (3D Marching Cubes & STL Export) Complete. 3D Mesh endpoints and Next.js 3D Viewport verified.
+- **Status:** Phase 5 (SimpleITK 3D Registration & Multi-Modal Alignment) Complete. Registration service, API endpoints & Next.js Register UI verified.
 - **Last worked on:** (2026-09-03)
   - Deployment architecture formalized: Streamlit Community Cloud (free, 2.7GB RAM, 50GB storage) for web application hosting + Hugging Face Hub model repo for weights/checkpoint storage (circumvents GitHub 100MB file limit). Render dropped (512MB RAM free tier insufficient for MONAI/PyTorch).
   - Dependency compatibility verified in local venv: Discovered critical upstream bug with latest `streamlit==1.63.0` and `stpyvista==0.2.1` (Components v2 import failure). Successfully pinned and verified working combination: `streamlit==1.40.0` + `stpyvista==0.1.4`.
@@ -75,7 +75,7 @@ No HTTP/REST endpoints. The application exposes an interactive Streamlit UI with
 - [x] Quantitative evaluation suite (`backend/app/services/metrics_service.py`, `backend/app/api/routes_evaluate.py`)
 - [ ] Multichannel / derived spectral feature experiment (`src/spectral.py`)
 - [x] 3D surface mesh reconstruction & STL export (`backend/app/services/reconstruct_service.py`, `backend/app/api/routes_reconstruct.py`)
-- [ ] Rigid/Affine registration engine (`src/register.py`)
+- [x] Rigid/Affine registration engine (`backend/app/services/register_service.py`, `backend/app/api/routes_register.py`)
 - [ ] Simulated surgical navigation viewer (`src/viz.py`)
 - [ ] Local VLM explanation generator (`src/vlm.py`)
 - [ ] Complete Streamlit multi-page application (`app/`)

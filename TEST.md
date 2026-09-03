@@ -91,6 +91,13 @@ print("Marching cubes and STL export verified.")
 "
 ```
 
+### 6.6 SimpleITK 3D Registration Smoke Test
+```bash
+# Test multi-resolution Euler3D/Affine registration on synthetic fixed-moving pair
+python3 -m backend.app.services.register_service
+```
+**✅ RUN on 2026-09-03, real result:** Registration converged in 19 iterations with final Mutual Information metric `-2.05441`, recovering translation shifts (X: -3.75mm, Y: 2.72mm, Z: 2.27mm) and generating registered volume.
+
 ## 7. External Dependency Reachability Test
 
 ### 7.1 MSD Task02_Heart S3 Bucket

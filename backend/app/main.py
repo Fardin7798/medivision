@@ -7,6 +7,7 @@ from backend.app.api.routes_preprocess import router as prep_router
 from backend.app.api.routes_segment import router as seg_router
 from backend.app.api.routes_evaluate import router as eval_router
 from backend.app.api.routes_reconstruct import router as recon_router
+from backend.app.api.routes_register import router as reg_router
 from backend.app.config import get_config
 
 cfg = get_config()
@@ -32,6 +33,7 @@ app.include_router(prep_router)
 app.include_router(seg_router)
 app.include_router(eval_router)
 app.include_router(recon_router)
+app.include_router(reg_router)
 
 @app.get("/health")
 def health_check():

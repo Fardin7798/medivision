@@ -78,7 +78,7 @@
 
 ### Phase 9 — 3D Reconstruction & Registration Core
 - [x] Implement Marching Cubes surface extraction, Laplacian smoothing, and STL/OBJ export in `backend/app/services/reconstruct_service.py`.
-- [ ] Implement SimpleITK Euler3D/Affine registration in `src/register.py`.
+- [x] Implement SimpleITK Euler3D/Affine registration in `backend/app/services/register_service.py`.
 - [ ] Implement 3D PyVista interactive rendering via `stpyvista` in `src/viz.py`.
 
 ### Phase 10 — Multichannel Experiment & VLM Module
