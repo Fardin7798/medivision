@@ -115,7 +115,7 @@ No HTTP/REST endpoints. The application exposes an interactive Streamlit UI with
 
 ## Owner & Links
 - **Author:** shaikhfardin
-- **Repo:** (to be initialized)
+- **Repo:** https://github.com/Fardin7798/medivision
 - **Live URL(s):** (Streamlit Community Cloud deployment pending Phase 8)
 - **Documentation:**
   - `docs/PRD.md`
