@@ -252,7 +252,7 @@ def preprocess_volume_file(
 
 if __name__ == "__main__":
     print("Testing preprocessing module...")
-    from src.data import create_synthetic_sample
+    from backend.app.services.data_service import create_synthetic_sample
     img_p, lbl_p = create_synthetic_sample()
     
     proc_img, aff, meta = preprocess_volume_file(img_p, output_file="./outputs/preprocessed_test.nii.gz")

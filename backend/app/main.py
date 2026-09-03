@@ -23,10 +23,14 @@ app = FastAPI(
     description=cfg["project"]["description"],
 )
 
-# Enable CORS for Next.js frontend (localhost:3000)
+# Enable secure CORS with explicit allowed origins (supports env override)
+import os
+raw_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,https://medivision-a.streamlit.app")
+allowed_origins = [orig.strip() for orig in raw_origins.split(",") if orig.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

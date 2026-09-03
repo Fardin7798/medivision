@@ -42,6 +42,7 @@ def generate_report_endpoint(payload: dict = Body(...)):
 
     return {
         "status": "success",
+        "report_id": report["report_id"],
         "report": report,
     }
 
