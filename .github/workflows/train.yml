@@ -6,7 +6,7 @@ on:
       epochs:
         description: "Number of training epochs"
         required: false
-        default: "100"
+        default: "50"
       batch_size:
         description: "Batch size"
         required: false
@@ -51,19 +51,30 @@ jobs:
             "kernel_sources": []
           }
           EOF
-          cat > kaggle_job/kaggle_train.py << PYEOF
+          cat > kaggle_job/kaggle_train.py << 'PYEOF'
           import os, subprocess, sys
 
           REPO_URL = "https://github.com/Fardin7798/medivision.git"
           os.environ["HF_TOKEN"] = "${{ secrets.HF_TOKEN }}"
+          epochs = "${{ github.event.inputs.epochs }}" or "50"
+          batch_size = "${{ github.event.inputs.batch_size }}" or "2"
 
+          print(f"[Kaggle Runner] Initializing MediVision Training on Python {sys.version}...")
           subprocess.run(["git", "clone", "--depth", "1", REPO_URL, "/kaggle/working/medivision"], check=True)
           os.chdir("/kaggle/working/medivision")
-          subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-r", "requirements.txt"], check=True)
+
+          # Install packages without overriding Kaggle's pre-installed GPU PyTorch & CUDA
+          subprocess.run([
+              sys.executable, "-m", "pip", "install", "-q",
+              "monai>=1.3.0", "nibabel>=5.0.0", "SimpleITK>=2.3.0",
+              "scikit-image>=0.22.0", "huggingface_hub>=0.23.0", "pyyaml>=6.0.0"
+          ], check=True)
+
+          # Execute full 3D U-Net Training Pipeline
           subprocess.run([
               sys.executable, "-m", "backend.app.train",
-              "--epochs", "${{ github.event.inputs.epochs }}",
-              "--batch-size", "${{ github.event.inputs.batch_size }}",
+              "--epochs", str(epochs),
+              "--batch-size", str(batch_size),
           ], check=True)
           PYEOF
 
