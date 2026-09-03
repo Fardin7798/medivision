@@ -1,1 +1,0 @@
-"""MediVision Backend Package."""
