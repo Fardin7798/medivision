@@ -13,6 +13,7 @@ import {
   FileText,
   Gauge,
   ShieldCheck,
+  Cloud,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { href: "/report", label: "Radiologist Report", icon: FileText },
   { href: "/benchmark", label: "Benchmark Suite", icon: Gauge },
   { href: "/safety", label: "Safety & QA Audit", icon: ShieldCheck },
+  { href: "/cloud", label: "Cloud Database", icon: Cloud },
 ];
 
 export default function Sidebar() {

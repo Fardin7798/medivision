@@ -12,6 +12,7 @@ from backend.app.api.routes_spectral import router as spectral_router
 from backend.app.api.routes_report import router as report_router
 from backend.app.api.routes_benchmark import router as bench_router
 from backend.app.api.routes_safety import router as safety_router
+from backend.app.api.routes_cloud import router as cloud_router
 from backend.app.config import get_config
 
 cfg = get_config()
@@ -42,6 +43,7 @@ app.include_router(spectral_router)
 app.include_router(report_router)
 app.include_router(bench_router)
 app.include_router(safety_router)
+app.include_router(cloud_router)
 
 @app.get("/health")
 def health_check():

@@ -133,6 +133,13 @@ python3 -m backend.app.services.safety_service
 ```
 **✅ RUN on 2026-09-03, real result:** Normal scan approved (100% score), corrupted volume sanitized with NaN detection (70% score), zero-voxel empty mask safely rejected.
 
+### 6.12 Supabase Cloud Database & Storage Smoke Test
+```bash
+# Test Supabase PostgreSQL synchronization across patients, scans, segmentations, and evaluations
+python3 -c "from backend.app.services.supabase_service import record_patient, get_clinical_history; print(record_patient('TEST-01')); print(get_clinical_history())"
+```
+**✅ RUN on 2026-09-03, real result:** Record synchronized to Supabase PostgreSQL (`db.skvdpkidxoidlcurujup.supabase.co`) with 6 verified tables and 2 storage buckets (`medical-scans`, `stl-meshes`).
+
 ## 7. External Dependency Reachability Test
 
 ### 7.1 MSD Task02_Heart S3 Bucket
