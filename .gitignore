@@ -1,0 +1,47 @@
+# Python & Virtual Environments
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Node.js & Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/dist/
+frontend/.turbo/
+node_modules/
+.next/
+*.tsbuildinfo
+
+# Large Datasets & Binary Artifacts
+data/
+outputs/
+models/
+*.tar
+*.tar.gz
+*.nii
+*.nii.gz
+*.stl
+*.obj
+
+# Environment & Secrets (Security Hygiene)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.token
+
+# IDE & OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
