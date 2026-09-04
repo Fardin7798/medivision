@@ -2,7 +2,16 @@
 
 import React, { useState } from 'react';
 import { ClinicalCase } from '@/types';
-import { Upload, FileText, CheckCircle2, AlertCircle, X, ShieldCheck } from 'lucide-react';
+import { PuterClient } from '@/lib/puter/client';
+import {
+  Upload,
+  FileText,
+  CheckCircle2,
+  X,
+  Sparkles,
+  Loader2,
+  Camera,
+} from 'lucide-react';
 
 interface CustomScanUploadModalProps {
   isOpen: boolean;
@@ -18,9 +27,14 @@ export const CustomScanUploadModal: React.FC<CustomScanUploadModalProps> = ({
   const [dragActive, setDragActive] = useState(false);
   const [fileSelected, setFileSelected] = useState<File | null>(null);
   const [patientName, setPatientName] = useState('Patient_Custom_001');
+  const [patientAge, setPatientAge] = useState(52);
   const [modality, setModality] = useState<'MRI T1-CE' | 'CT Helical' | 'CT Angiography'>('MRI T1-CE');
   const [safetyMargin, setSafetyMargin] = useState(5.0);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Puter OCR State
+  const [isOcrProcessing, setIsOcrProcessing] = useState(false);
+  const [ocrSnippet, setOcrSnippet] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -49,6 +63,20 @@ export const CustomScanUploadModal: React.FC<CustomScanUploadModalProps> = ({
     }
   };
 
+  // Puter OCR Prescription Handler
+  const handlePrescriptionOcr = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setIsOcrProcessing(true);
+      const result = await PuterClient.extractDetailsFromMedicalImage(file);
+      if (result.patientName) setPatientName(result.patientName);
+      if (result.patientAge) setPatientAge(result.patientAge);
+      if (result.modality) setModality(result.modality);
+      if (result.extractedText) setOcrSnippet(result.extractedText);
+      setIsOcrProcessing(false);
+    }
+  };
+
   const handleLoadScan = () => {
     setIsProcessing(true);
 
@@ -58,9 +86,9 @@ export const CustomScanUploadModal: React.FC<CustomScanUploadModalProps> = ({
         name: `${patientName} (${modality})`,
         modality: modality,
         category: 'Custom Intraoperative DICOM',
-        patientAge: 52,
+        patientAge: patientAge,
         gender: 'Other',
-        description: `Imported intraoperative volume: ${fileSelected?.name || 'custom_dicom_volume.nii.gz'}. Auto-calibrated coordinate frame.`,
+        description: `Imported volume: ${fileSelected?.name || 'custom_dicom_volume.nii.gz'}. Auto-calibrated frame. ${ocrSnippet ? `OCR: ${ocrSnippet}` : ''}`,
         volumeUrl: 'https://niivue.github.io/niivue-demo-images/mni152.nii.gz',
         targetPosition: { x: 18.0, y: 15.0, z: 25.0 },
         entryPosition: { x: 45.0, y: -10.0, z: 55.0 },
@@ -87,7 +115,7 @@ export const CustomScanUploadModal: React.FC<CustomScanUploadModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-      <div className="bg-white border border-[#E9EDCA] rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-4 animate-fadeIn">
+      <div className="bg-white border border-[#E9EDCA] rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-4 animate-fadeIn max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center border-b border-[#E9EDCA] pb-3">
           <div className="flex items-center gap-2.5">
@@ -99,7 +127,7 @@ export const CustomScanUploadModal: React.FC<CustomScanUploadModalProps> = ({
                 Import Patient Medical Scan
               </h2>
               <p className="text-xs text-[#6d5d4b]">
-                DICOM Series (.dcm), NIfTI (.nii, .nii.gz), or 3D NRRD
+                DICOM Series (.dcm), NIfTI (.nii, .nii.gz), or Puter OCR Slip
               </p>
             </div>
           </div>
@@ -110,6 +138,45 @@ export const CustomScanUploadModal: React.FC<CustomScanUploadModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Puter OCR Prescription Auto-Fill Banner */}
+        <div className="bg-[#FEF9E1] p-3 rounded-2xl border border-[#E9EDCA] flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <Camera className="w-4 h-4 text-[#D3A373]" />
+            <div>
+              <strong className="text-[#2e2417] font-display block">Puter OCR Auto-Fill</strong>
+              <span className="text-[11px] text-[#7d6b56]">Upload requisition slip or MRI report to auto-populate</span>
+            </div>
+          </div>
+
+          <label className="cursor-pointer py-1.5 px-3 bg-[#D3A373] text-white rounded-xl text-[11px] font-bold font-display hover:bg-[#be8e5e] transition-all flex items-center gap-1.5 shadow-xs whitespace-nowrap">
+            {isOcrProcessing ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Reading Slip...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Scan Slip / Image</span>
+              </>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePrescriptionOcr}
+              disabled={isOcrProcessing}
+            />
+          </label>
+        </div>
+
+        {ocrSnippet && (
+          <div className="bg-[#FAEDCD]/40 p-2.5 rounded-xl border border-[#E9EDCA] text-[11px] text-[#4b3c2e] font-mono shadow-inner">
+            <span className="font-bold block text-[#784819]">OCR Extracted Info:</span>
+            <span>{ocrSnippet}</span>
+          </div>
+        )}
 
         {/* Drag & Drop Upload Zone */}
         <div

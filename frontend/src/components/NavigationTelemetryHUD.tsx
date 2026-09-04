@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ClinicalCase, NavigationTelemetry, Vector3D } from '@/types';
 import { opticalTracker } from '@/lib/hardware/opticalTracker';
+import { PuterClient } from '@/lib/puter/client';
 import {
   Crosshair,
   Layers,
@@ -10,7 +11,9 @@ import {
   RotateCcw,
   Play,
   FileDown,
-  Compass
+  Compass,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 
 interface NavigationTelemetryHUDProps {
@@ -33,11 +36,15 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationStep, setSimulationStep] = useState(0);
   const [isOpticalTrackingActive, setIsOpticalTrackingActive] = useState(true);
+  const [isAudioGuidance, setIsAudioGuidance] = useState(false);
   const [opticalStatus, setOpticalStatus] = useState({
     rmsErrorMm: 0.12,
     quality: 0.99,
     frequencyHz: 60,
   });
+
+  const lastAlertTimeRef = useRef<number>(0);
+  const lastZoneRef = useRef<'safe' | 'warning' | 'critical'>('safe');
 
   // Optical Tracker 60Hz Stream Subscription
   useEffect(() => {
@@ -54,6 +61,33 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
 
     return () => unsubscribe();
   }, [isOpticalTrackingActive, activeCase]);
+
+  // Hands-Free Audio Guidance Alerts (Debounced with Cooldown)
+  useEffect(() => {
+    if (!isAudioGuidance) return;
+
+    const now = Date.now();
+    const dist = telemetry.distanceMm;
+    const margin = activeCase.safetyMarginMm;
+
+    let currentZone: 'safe' | 'warning' | 'critical' = 'safe';
+    if (dist <= margin) {
+      currentZone = 'critical';
+    } else if (dist <= margin * 2.5) {
+      currentZone = 'warning';
+    }
+
+    if (currentZone !== lastZoneRef.current || (now - lastAlertTimeRef.current > 7000 && currentZone !== 'safe')) {
+      lastZoneRef.current = currentZone;
+      lastAlertTimeRef.current = now;
+
+      if (currentZone === 'critical') {
+        PuterClient.speakAlert(`Warning! Safety margin reached. Distance is ${dist.toFixed(1)} millimeters.`);
+      } else if (currentZone === 'warning') {
+        PuterClient.speakAlert(`Approaching boundary corridor. Distance is ${dist.toFixed(1)} millimeters.`);
+      }
+    }
+  }, [telemetry.distanceMm, isAudioGuidance, activeCase.safetyMarginMm]);
 
   // Automated Trajectory Insertion Simulation Loop
   useEffect(() => {
@@ -105,9 +139,12 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
   const radarCrossX = 50 + Math.sin((azimuthAngle * Math.PI) / 180) * Math.min(38, telemetry.distanceMm * 0.6);
   const radarCrossY = 50 - Math.cos((elevationAngle * Math.PI) / 180) * Math.min(38, telemetry.distanceMm * 0.6);
 
+  const isCritical = telemetry.marginStatus === 'CRITICAL' || telemetry.marginStatus === 'BREACHED';
+  const isApproaching = telemetry.marginStatus === 'APPROACHING';
+
   return (
     <div className="solid-panel rounded-3xl p-4 shadow-sm flex flex-col gap-3.5 border border-[#E9EDCA]">
-      {/* Header with Case Modality Badge */}
+      {/* Header with Case Modality Badge & Audio Guidance Toggle */}
       <div className="flex items-center justify-between border-b border-[#E9EDCA] pb-3">
         <div className="flex items-center gap-2">
           <div className="p-2 rounded-xl bg-[#FAEDCD] text-[#784819] border border-[#D3A373]/40">
@@ -123,9 +160,26 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
           </div>
         </div>
 
-        <span className="text-[10px] bg-[#E9EDCA] text-[#445220] font-mono px-2.5 py-0.5 rounded-full border border-[#CDD5AE] font-bold">
-          {activeCase.modality}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => {
+              const next = !isAudioGuidance;
+              setIsAudioGuidance(next);
+              if (next) PuterClient.speakAlert('Hands-free audio guidance activated');
+            }}
+            className={`p-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 ${
+              isAudioGuidance
+                ? 'bg-[#CDD5AE] text-[#2c3814] border-[#9ba96a] shadow-xs'
+                : 'bg-white text-[#7d6b56] border-[#E9EDCA] hover:bg-[#FAEDCD]'
+            }`}
+            title={isAudioGuidance ? 'Audio Guidance Active' : 'Enable Audio Guidance'}
+          >
+            {isAudioGuidance ? <Volume2 className="w-3.5 h-3.5 text-[#2c3814]" /> : <VolumeX className="w-3.5 h-3.5" />}
+          </button>
+          <span className="text-[10px] bg-[#E9EDCA] text-[#445220] font-mono px-2.5 py-0.5 rounded-full border border-[#CDD5AE] font-bold">
+            {activeCase.modality}
+          </span>
+        </div>
       </div>
 
       {/* 21st.dev Circular Target Radar Scope */}
@@ -141,7 +195,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
         {/* SVG Radar Scope Canvas */}
         <div className="relative w-40 h-40 flex items-center justify-center my-1">
           <svg className="w-full h-full" viewBox="0 0 100 100">
-            {/* Concentric Rings (5°, 10°, 15° deviation zones) */}
+            {/* Concentric Rings */}
             <circle cx="50" cy="50" r="40" fill="none" stroke="#1e293b" strokeWidth="1" />
             <circle cx="50" cy="50" r="28" fill="none" stroke="#334155" strokeWidth="1" strokeDasharray="2,2" />
             <circle cx="50" cy="50" r="16" fill="none" stroke="#475569" strokeWidth="1" />
@@ -190,64 +244,67 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
           </svg>
         </div>
 
-        {/* Live Distance Readout underneath Radar */}
-        <div className="flex items-center justify-between w-full px-2 pt-1 border-t border-[#1e293b] text-[10px] font-mono">
+        {/* Real-time Distance Metric Tag */}
+        <div className="w-full flex justify-between items-center text-[11px] font-mono text-[#e2e8f0] pt-1 border-t border-[#1e293b]">
           <span className="text-[#94a3b8]">Dist to Focal Core:</span>
-          <span className={`font-bold text-xs ${
-            telemetry.distanceMm < 2.0
-              ? 'text-[#a3e635]'
-              : telemetry.distanceMm <= activeCase.safetyMarginMm
-              ? 'text-[#f59e0b]'
-              : 'text-[#38bdf8]'
-          }`}>
+          <span className="text-[#38bdf8] font-black text-sm tracking-wide">
             {telemetry.distanceMm.toFixed(1)} mm
           </span>
         </div>
       </div>
 
-      {/* Primary Distance Metric & Critical Safety Margin Bar */}
-      <div className="bg-[#FAEDCD]/40 p-3.5 rounded-2xl border border-[#E9EDCA] space-y-2">
-        <div className="flex justify-between items-center">
-          <span className="text-xs font-bold text-[#5c4a38] font-display">Target Corridor Distance</span>
-          <span className={`text-xs px-2.5 py-0.5 rounded-full font-mono font-bold border ${
-            telemetry.distanceMm <= activeCase.safetyMarginMm
-              ? 'bg-[#ef4444]/15 text-[#dc2626] border-[#ef4444]/40 animate-pulse'
-              : 'bg-[#CDD5AE] text-[#334217] border-[#9ba96a]'
-          }`}>
-            {telemetry.distanceMm <= activeCase.safetyMarginMm ? 'NEAR SAFETY MARGIN' : 'SAFE CORRIDOR'}
+      {/* Target Margin Status Bar */}
+      <div className="space-y-1.5 bg-white p-3 rounded-2xl border border-[#E9EDCA] shadow-xs">
+        <div className="flex justify-between items-center text-xs font-bold text-[#382e21] font-display">
+          <span>Target Corridor Distance</span>
+          <span
+            className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
+              isCritical
+                ? 'bg-[#fee2e2] text-[#991b1b] border border-[#f87171]'
+                : isApproaching
+                ? 'bg-[#fef3c7] text-[#92400e] border border-[#fde68a]'
+                : 'bg-[#E9EDCA] text-[#38461b] border border-[#CDD5AE]'
+            }`}
+          >
+            {isCritical
+              ? 'Critical Margin'
+              : isApproaching
+              ? 'Approaching Margin'
+              : 'Safe Corridor'}
           </span>
         </div>
 
-        {/* Dynamic Progress Indicator */}
-        <div className="w-full bg-white h-2.5 rounded-full overflow-hidden border border-[#E9EDCA] p-0.5">
+        <div className="w-full bg-[#E9EDCA]/40 h-2.5 rounded-full overflow-hidden p-0.5 border border-[#E9EDCA]">
           <div
             className={`h-full rounded-full transition-all duration-300 ${
-              telemetry.distanceMm <= activeCase.safetyMarginMm
+              isCritical
                 ? 'bg-[#ef4444]'
-                : 'bg-gradient-to-r from-[#D3A373] via-[#CDD5AE] to-[#a3b171]'
+                : isApproaching
+                ? 'bg-[#f59e0b]'
+                : 'bg-[#54682b]'
             }`}
-            style={{ width: `${Math.min(100, Math.max(0, (telemetry.distanceMm / 60) * 100))}%` }}
+            style={{ width: `${Math.min(100, (telemetry.distanceMm / 80) * 100)}%` }}
           />
         </div>
 
         <div className="flex justify-between text-[10px] text-[#7d6b56] font-mono">
           <span>0 mm (Target)</span>
-          <span className="text-[#c2410c] font-bold">{activeCase.safetyMarginMm} mm Margin</span>
+          <span className="text-[#D3A373] font-bold">{activeCase.safetyMarginMm} mm Margin</span>
           <span>60+ mm</span>
         </div>
       </div>
 
-      {/* 3D Coordinates Grid */}
-      <div className="grid grid-cols-2 gap-2.5 text-xs">
+      {/* Numerical Spatial Telemetry Coordinates */}
+      <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="bg-white p-3 rounded-2xl border border-[#E9EDCA] shadow-xs">
           <div className="text-[#7d6b56] text-[10px] mb-1.5 font-bold flex items-center gap-1.5 font-display">
             <span className="w-2 h-2 rounded-full bg-[#D3A373]" />
             Pointer Tip (RAS mm)
           </div>
           <div className="font-mono space-y-1 text-xs text-[#2e2417]">
-            <div className="flex justify-between"><span>X:</span> <strong className="text-[#965a25]">{telemetry.pointerPosition.x.toFixed(1)}</strong></div>
-            <div className="flex justify-between"><span>Y:</span> <strong className="text-[#965a25]">{telemetry.pointerPosition.y.toFixed(1)}</strong></div>
-            <div className="flex justify-between"><span>Z:</span> <strong className="text-[#965a25]">{telemetry.pointerPosition.z.toFixed(1)}</strong></div>
+            <div className="flex justify-between"><span>X:</span> <strong className="text-[#784819]">{telemetry.pointerPosition.x.toFixed(1)}</strong></div>
+            <div className="flex justify-between"><span>Y:</span> <strong className="text-[#784819]">{telemetry.pointerPosition.y.toFixed(1)}</strong></div>
+            <div className="flex justify-between"><span>Z:</span> <strong className="text-[#784819]">{telemetry.pointerPosition.z.toFixed(1)}</strong></div>
           </div>
         </div>
 

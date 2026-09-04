@@ -2,16 +2,18 @@
 
 import React, { useState } from 'react';
 import { ClinicalCase, Vector3D } from '@/types';
+import { PuterClient } from '@/lib/puter/client';
 import {
   Sparkles,
-  Layers,
   Cpu,
   RefreshCw,
   CheckCircle2,
-  TrendingUp,
   Brain,
-  Eye,
-  Sliders
+  Sliders,
+  Bot,
+  Loader2,
+  ChevronRight,
+  ShieldAlert,
 } from 'lucide-react';
 
 interface AISegmentationPanelProps {
@@ -26,11 +28,24 @@ export const AISegmentationPanel: React.FC<AISegmentationPanelProps> = ({
   const [activeModel, setActiveModel] = useState<'unet-brain' | 'swin-unetr' | 'sam-med3d'>('unet-brain');
   const [confidenceThreshold, setConfidenceThreshold] = useState(0.85);
 
+  // Puter AI Copilot State
+  const [copilotResponse, setCopilotResponse] = useState<string | null>(null);
+  const [copilotLoading, setCopilotLoading] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+
   const handleRunInference = () => {
     setIsInferring(true);
     setTimeout(() => {
       setIsInferring(false);
     }, 1200);
+  };
+
+  const handleAskCopilot = async (topic: string) => {
+    setSelectedTopic(topic);
+    setCopilotLoading(true);
+    const answer = await PuterClient.askSurgicalCopilot(activeCase, topic);
+    setCopilotResponse(answer);
+    setCopilotLoading(false);
   };
 
   return (
@@ -43,10 +58,10 @@ export const AISegmentationPanel: React.FC<AISegmentationPanelProps> = ({
           </div>
           <div>
             <h2 className="text-xs uppercase tracking-wider font-extrabold text-[#2e2417] font-display">
-              WebGPU AI Segmentation
+              WebGPU AI & Clinical Copilot
             </h2>
             <p className="text-[10px] text-[#6d5d4b]">
-              Zero-Server ONNX WebGPU Runtime
+              Local ONNX Segmentation + Puter Keyless AI
             </p>
           </div>
         </div>
@@ -105,7 +120,7 @@ export const AISegmentationPanel: React.FC<AISegmentationPanelProps> = ({
       <button
         onClick={handleRunInference}
         disabled={isInferring}
-        className={`w-full py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-xs ${
+        className={`w-full py-2.5 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-xs ${
           isInferring
             ? 'bg-[#E9EDCA] text-[#425020]'
             : 'bg-[#CDD5AE] hover:bg-[#bec899] text-[#2c3814]'
@@ -115,8 +130,8 @@ export const AISegmentationPanel: React.FC<AISegmentationPanelProps> = ({
         <span className="font-display">{isInferring ? 'Computing WebGPU Tensors (12ms)...' : 'Run Live WebGPU Inference'}</span>
       </button>
 
-      {/* Confidence Threshold Slider */}
-      <div className="space-y-2 bg-white p-3 rounded-2xl border border-[#E9EDCA] shadow-xs">
+      {/* Confidence Cutoff Slider */}
+      <div className="space-y-1.5 bg-white p-2.5 rounded-2xl border border-[#E9EDCA] shadow-xs">
         <div className="flex justify-between items-center text-xs font-bold text-[#382e21] font-display">
           <span className="flex items-center gap-1.5">
             <Sliders className="w-3.5 h-3.5 text-[#D3A373]" />
@@ -137,8 +152,74 @@ export const AISegmentationPanel: React.FC<AISegmentationPanelProps> = ({
         />
       </div>
 
+      {/* Puter AI Surgical Copilot */}
+      <div className="bg-[#FEF9E1] p-3 rounded-2xl border border-[#E9EDCA] space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#2e2417] font-display">
+            <Bot className="w-3.5 h-3.5 text-[#D3A373]" />
+            <span>Intraoperative Surgical AI Copilot</span>
+          </div>
+          <span className="text-[9px] bg-[#E9EDCA] text-[#485626] font-mono px-2 py-0.5 rounded-full font-bold">
+            Puter LLM
+          </span>
+        </div>
+
+        {/* Action Prompt Chips */}
+        <div className="grid grid-cols-3 gap-1 text-[10px] font-bold font-display">
+          <button
+            onClick={() => handleAskCopilot('Analyze Resection Margin Safety')}
+            disabled={copilotLoading}
+            className={`py-1.5 px-1 rounded-xl border transition-all text-center flex items-center justify-center gap-1 ${
+              selectedTopic === 'Analyze Resection Margin Safety'
+                ? 'bg-[#D3A373] text-white border-[#D3A373]'
+                : 'bg-white border-[#E9EDCA] text-[#5c4a38] hover:bg-[#FAEDCD]'
+            }`}
+          >
+            <span>🛡️ Margin Safety</span>
+          </button>
+          <button
+            onClick={() => handleAskCopilot('Suggest Optimal Trajectory Entry Angle')}
+            disabled={copilotLoading}
+            className={`py-1.5 px-1 rounded-xl border transition-all text-center flex items-center justify-center gap-1 ${
+              selectedTopic === 'Suggest Optimal Trajectory Entry Angle'
+                ? 'bg-[#D3A373] text-white border-[#D3A373]'
+                : 'bg-white border-[#E9EDCA] text-[#5c4a38] hover:bg-[#FAEDCD]'
+            }`}
+          >
+            <span>📐 Entry Vector</span>
+          </button>
+          <button
+            onClick={() => handleAskCopilot('Eloquent Cortex & Vessel Risk Assessment')}
+            disabled={copilotLoading}
+            className={`py-1.5 px-1 rounded-xl border transition-all text-center flex items-center justify-center gap-1 ${
+              selectedTopic === 'Eloquent Cortex & Vessel Risk Assessment'
+                ? 'bg-[#D3A373] text-white border-[#D3A373]'
+                : 'bg-white border-[#E9EDCA] text-[#5c4a38] hover:bg-[#FAEDCD]'
+            }`}
+          >
+            <span>⚠️ Cortex Risk</span>
+          </button>
+        </div>
+
+        {/* Copilot Response Box */}
+        {copilotLoading ? (
+          <div className="bg-white p-2.5 rounded-xl border border-[#E9EDCA] flex items-center justify-center gap-2 text-[11px] text-[#784819] font-display">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#D3A373]" />
+            <span>Consulting AI Copilot...</span>
+          </div>
+        ) : copilotResponse ? (
+          <div className="bg-white p-2.5 rounded-xl border border-[#E9EDCA] text-[11px] text-[#3e3224] leading-relaxed font-sans shadow-inner">
+            {copilotResponse}
+          </div>
+        ) : (
+          <p className="text-[10px] text-[#7d6b56] italic">
+            Select a surgical prompt above to query live clinical AI analysis.
+          </p>
+        )}
+      </div>
+
       {/* Segmented Anatomical Structures Breakdown */}
-      <div className="space-y-2 bg-[#FAEDCD]/40 p-3 rounded-2xl border border-[#E9EDCA]">
+      <div className="space-y-1.5 bg-[#FAEDCD]/40 p-2.5 rounded-2xl border border-[#E9EDCA]">
         <div className="flex justify-between items-center text-xs font-bold text-[#382e21] font-display">
           <span className="flex items-center gap-1.5">
             <Brain className="w-3.5 h-3.5 text-[#54682b]" />
@@ -147,24 +228,24 @@ export const AISegmentationPanel: React.FC<AISegmentationPanelProps> = ({
           <span className="text-[10px] text-[#7d6b56] font-mono">Volumetric (cm³)</span>
         </div>
 
-        <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+        <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
           {activeCase.anatomicalStructures.map((structure, idx) => (
             <div
               key={structure.id}
-              className="bg-white p-2 rounded-xl border border-[#E9EDCA] flex items-center justify-between text-xs"
+              className="bg-white p-1.5 rounded-xl border border-[#E9EDCA] flex items-center justify-between text-xs"
             >
               <div className="flex items-center gap-2">
                 <span
-                  className="w-2.5 h-2.5 rounded-full"
+                  className="w-2 h-2 rounded-full"
                   style={{ backgroundColor: structure.color }}
                 />
-                <span className="font-bold text-[#2e2417] text-xs font-display">
+                <span className="font-bold text-[#2e2417] text-[11px] font-display">
                   {structure.name}
                 </span>
               </div>
-              <div className="flex items-center gap-2 font-mono text-[11px] text-[#6d5d4b]">
+              <div className="flex items-center gap-1.5 font-mono text-[10px] text-[#6d5d4b]">
                 <span className="text-[#2e2417] font-semibold">{(12.4 + idx * 8.2).toFixed(1)} cm³</span>
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#54682b]" />
+                <CheckCircle2 className="w-3 h-3 text-[#54682b]" />
               </div>
             </div>
           ))}
