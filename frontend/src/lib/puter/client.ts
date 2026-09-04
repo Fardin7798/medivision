@@ -346,8 +346,8 @@ Format your response strictly as:
 
     if (!text || text.trim() === '') return;
 
-    // 2. Try Puter Cloud AI Text-to-Speech first (with strict 2.5s network timeout)
-    if (this.isAvailable() && typeof puter.ai?.txt2speech === 'function') {
+    // Condition 1: Jab user Puter.js me Signed In (Login) ho -> Use Puter AI Voice
+    if (this.isAvailable() && this.isSignedIn() && typeof puter.ai?.txt2speech === 'function') {
       try {
         let isTimedOut = false;
         const timeoutPromise = new Promise((resolve) => {
@@ -366,14 +366,14 @@ Format your response strictly as:
             this._activeAudio = null;
           };
           await audio.play();
-          return; // AI voice is playing cleanly; NEVER fall through to browser speech!
+          return; // Puter AI voice played successfully; exit immediately
         }
       } catch (err) {
-        console.warn('Puter TTS failed, falling back to browser SpeechSynthesis:', err);
+        console.warn('Puter AI TTS failed, falling back to browser SpeechSynthesis:', err);
       }
     }
 
-    // 3. Fallback to Browser SpeechSynthesis ONLY IF Puter TTS failed or timed out
+    // Condition 2: Jab user Puter.js me Login NA ho (ya Puter AI fail ho jaye) -> Instant Browser Speech
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
@@ -382,7 +382,7 @@ Format your response strictly as:
         utterance.pitch = 1.0;
         window.speechSynthesis.speak(utterance);
       } catch (err) {
-        console.warn('SpeechSynthesis failed:', err);
+        console.warn('Browser SpeechSynthesis error:', err);
       }
     }
   },
