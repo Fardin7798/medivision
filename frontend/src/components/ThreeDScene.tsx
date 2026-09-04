@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ClinicalCase, Vector3D } from '@/types';
-import { Grid, RotateCcw, Eye, Loader2, Sparkles, Layers, ShieldCheck } from 'lucide-react';
+import { Grid, RotateCcw, Eye, Loader2 } from 'lucide-react';
 
 interface ThreeDSceneProps {
   activeCase: ClinicalCase;
@@ -59,9 +59,9 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       });
     };
 
-    // Initialize Three.js Scene with Warm Dark Forest Studio Background
+    // Initialize Three.js Scene with Deep Clinical Slate Background
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#161c13');
+    scene.background = new THREE.Color('#0f172a');
     sceneRef.current = scene;
 
     // Perspective Camera
@@ -75,13 +75,17 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     cameraRef.current = camera;
 
     // WebGL Renderer with High Precision Anti-Aliasing
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance',
+    });
     renderer.setSize(currentMount.clientWidth, currentMount.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
+    renderer.toneMappingExposure = 1.35;
     rendererRef.current = renderer;
 
     // Clear previous children
@@ -99,29 +103,29 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     controls.target.set(0, 0, 0);
     controlsRef.current = controls;
 
-    // Studio Lighting Rig (Sage & Amber Clinical Palette)
-    const ambientLight = new THREE.AmbientLight(0xFEF9E1, 1.8);
+    // High-Tech Surgical Lighting Rig (Electric Cyan & Ice White Studio)
+    const ambientLight = new THREE.AmbientLight(0xe0f2fe, 1.6);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xD3A373, 2.6);
+    const keyLight = new THREE.DirectionalLight(0x38bdf8, 3.2);
     keyLight.position.set(50, 80, 60);
     keyLight.castShadow = true;
     scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(0xCDD5AE, 2.0);
-    rimLight.position.set(-50, -30, -50);
+    const rimLight = new THREE.DirectionalLight(0x0284c7, 2.5);
+    rimLight.position.set(-60, -30, -50);
     scene.add(rimLight);
 
-    const fillLight = new THREE.DirectionalLight(0xFAEDCD, 1.6);
+    const fillLight = new THREE.DirectionalLight(0xbae6fd, 1.8);
     fillLight.position.set(0, 80, -40);
     scene.add(fillLight);
 
-    const bottomBounce = new THREE.DirectionalLight(0x9fae72, 1.0);
+    const bottomBounce = new THREE.DirectionalLight(0x0369a1, 1.2);
     bottomBounce.position.set(0, -60, 0);
     scene.add(bottomBounce);
 
-    // Spatial Reference Grid
-    const gridHelper = new THREE.GridHelper(90, 18, 0xD3A373, 0x2e3827);
+    // Spatial Reference Grid (Surgical Blue Neon)
+    const gridHelper = new THREE.GridHelper(90, 18, 0x38bdf8, 0x1e293b);
     gridHelper.position.y = -26;
     gridHelperRef.current = gridHelper;
     scene.add(gridHelper);
@@ -131,16 +135,20 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     loadedModelsGroupRef.current = modelsGroup;
     scene.add(modelsGroup);
 
-    // 3D GLTF Mesh Loader & Normalizer Function
+    // 3D GLTF Mesh Loader & Normalizer
     setModelLoading(true);
     const gltfLoader = new GLTFLoader();
+
+    // Medical Cyan & Ice Bone Color Palette
+    const BRAIN_COLOR = 0x38bdf8; // Vivid Medical Cyan Blue
+    const SKULL_COLOR = 0xe2e8f0; // Platinum Bone Ivory with Blue Highlights
 
     // Helper: Normalize, Center, and Auto-Scale any 3D GLTF Model
     const normalizeAndStyleModel = (
       model: THREE.Group,
       type: 'brain' | 'skull',
       targetDimension: number,
-      opacity: number = 0.92,
+      opacity: number = 0.95,
       wire: boolean = false
     ) => {
       // 1. Compute original bounding box
@@ -148,7 +156,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       const initialSize = initialBox.getSize(new THREE.Vector3());
       const maxDim = Math.max(initialSize.x, initialSize.y, initialSize.z) || 1;
 
-      // 2. Scale proportionally to target size
+      // 2. Scale proportionally to standard surgical scale
       const scaleFactor = targetDimension / maxDim;
       model.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
@@ -159,7 +167,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       model.position.y -= scaledCenter.y;
       model.position.z -= scaledCenter.z;
 
-      // 4. Apply high-fidelity Double-Sided materials
+      // 4. Apply high-fidelity Double-Sided Medical Shaders
       model.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
@@ -170,9 +178,9 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
           }
 
           mesh.material = new THREE.MeshStandardMaterial({
-            color: type === 'brain' ? 0xD3A373 : 0xE9EDCA,
-            roughness: type === 'brain' ? 0.45 : 0.65,
-            metalness: type === 'brain' ? 0.1 : 0.15,
+            color: type === 'brain' ? BRAIN_COLOR : SKULL_COLOR,
+            roughness: type === 'brain' ? 0.35 : 0.6,
+            metalness: type === 'brain' ? 0.15 : 0.2,
             wireframe: wire,
             side: THREE.DoubleSide,
             transparent: opacity < 1.0,
@@ -185,21 +193,21 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       return model;
     };
 
-    // Helper: Build high-quality Procedural Fallback Mesh
+    // Helper: Build high-quality Procedural Fallback Mesh (Medical Cyan & Ice Bone)
     const buildProceduralFallback = (type: 'brain' | 'skull') => {
       const group = new THREE.Group();
       if (type === 'brain') {
-        // High-poly Cerebrum Hemispheres with realistic gyri contours
+        // High-poly Cerebrum Hemispheres in Medical Blue
         const leftHemi = new THREE.Mesh(
           new THREE.SphereGeometry(15, 36, 36),
           new THREE.MeshStandardMaterial({
-            color: 0xD3A373,
-            roughness: 0.45,
-            metalness: 0.1,
+            color: 0x38bdf8,
+            roughness: 0.35,
+            metalness: 0.15,
             side: THREE.DoubleSide,
             wireframe: isWireframe,
             transparent: true,
-            opacity: 0.92,
+            opacity: 0.94,
           })
         );
         leftHemi.position.set(-6.5, 0, 0);
@@ -209,26 +217,26 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
         const rightHemi = new THREE.Mesh(
           new THREE.SphereGeometry(15, 36, 36),
           new THREE.MeshStandardMaterial({
-            color: 0xc49261,
-            roughness: 0.45,
-            metalness: 0.1,
+            color: 0x0ea5e9,
+            roughness: 0.35,
+            metalness: 0.15,
             side: THREE.DoubleSide,
             wireframe: isWireframe,
             transparent: true,
-            opacity: 0.92,
+            opacity: 0.94,
           })
         );
         rightHemi.position.set(6.5, 0, 0);
         rightHemi.scale.set(1.0, 1.15, 1.25);
         group.add(rightHemi);
 
-        // Cerebellum
+        // Cerebellum (Deep Cobalt Blue)
         const cerebellum = new THREE.Mesh(
           new THREE.SphereGeometry(9, 28, 28),
           new THREE.MeshStandardMaterial({
-            color: 0xCDD5AE,
-            roughness: 0.5,
-            metalness: 0.1,
+            color: 0x0284c7,
+            roughness: 0.4,
+            metalness: 0.15,
             side: THREE.DoubleSide,
             wireframe: isWireframe,
           })
@@ -237,29 +245,29 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
         cerebellum.scale.set(1.4, 0.9, 1.0);
         group.add(cerebellum);
 
-        // Brainstem
+        // Brainstem (Ice Blue)
         const brainstem = new THREE.Mesh(
           new THREE.CylinderGeometry(3.5, 2.5, 14, 24),
           new THREE.MeshStandardMaterial({
-            color: 0xFAEDCD,
-            roughness: 0.5,
+            color: 0x7dd3fc,
+            roughness: 0.4,
             side: THREE.DoubleSide,
           })
         );
         brainstem.position.set(0, -14, -4);
         group.add(brainstem);
       } else {
-        // High-poly Anatomical Cranial Vault (Calvarium) & Facial Skeleton
+        // High-poly Anatomical Cranial Vault in Platinum Bone
         const cranium = new THREE.Mesh(
           new THREE.SphereGeometry(18, 40, 40),
           new THREE.MeshStandardMaterial({
-            color: 0xE9EDCA,
-            roughness: 0.65,
-            metalness: 0.12,
+            color: 0xe2e8f0,
+            roughness: 0.55,
+            metalness: 0.2,
             side: THREE.DoubleSide,
             wireframe: isWireframe,
             transparent: true,
-            opacity: 0.9,
+            opacity: 0.92,
           })
         );
         cranium.scale.set(1.05, 1.2, 1.3);
@@ -269,14 +277,14 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
         // Facial Bone & Orbit Cavities
         const leftOrbit = new THREE.Mesh(
           new THREE.TorusGeometry(3.8, 1.2, 16, 24),
-          new THREE.MeshStandardMaterial({ color: 0xCDD5AE, roughness: 0.6 })
+          new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5 })
         );
         leftOrbit.position.set(-6, -2, 18);
         group.add(leftOrbit);
 
         const rightOrbit = new THREE.Mesh(
           new THREE.TorusGeometry(3.8, 1.2, 16, 24),
-          new THREE.MeshStandardMaterial({ color: 0xCDD5AE, roughness: 0.6 })
+          new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5 })
         );
         rightOrbit.position.set(6, -2, 18);
         group.add(rightOrbit);
@@ -285,7 +293,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     };
 
     if (modelType === 'dual') {
-      // Combined Dual View: Semi-transparent Skull + Solid Internal Brain
+      // Combined Dual View: Semi-transparent Skull + Vivid Blue Internal Brain
       let loadedCount = 0;
       const checkDone = () => {
         loadedCount++;
@@ -295,7 +303,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       gltfLoader.load(
         '/models/brain.glb',
         (gltf) => {
-          const brain = normalizeAndStyleModel(gltf.scene, 'brain', 34, 0.95, isWireframe);
+          const brain = normalizeAndStyleModel(gltf.scene, 'brain', 34, 0.96, isWireframe);
           modelsGroup.add(brain);
           checkDone();
         },
@@ -310,7 +318,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       gltfLoader.load(
         '/models/skull.glb',
         (gltf) => {
-          const skull = normalizeAndStyleModel(gltf.scene, 'skull', 44, 0.38, isWireframe);
+          const skull = normalizeAndStyleModel(gltf.scene, 'skull', 44, 0.35, isWireframe);
           modelsGroup.add(skull);
           checkDone();
         },
@@ -321,7 +329,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
             if ((c as THREE.Mesh).isMesh) {
               const m = (c as THREE.Mesh).material as THREE.MeshStandardMaterial;
               m.transparent = true;
-              m.opacity = 0.35;
+              m.opacity = 0.32;
             }
           });
           modelsGroup.add(fallbackSkull);
@@ -336,7 +344,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       gltfLoader.load(
         modelUrl,
         (gltf) => {
-          const model = normalizeAndStyleModel(gltf.scene, modelType, targetDim, 0.92, isWireframe);
+          const model = normalizeAndStyleModel(gltf.scene, modelType, targetDim, 0.94, isWireframe);
           modelsGroup.add(model);
           setModelLoading(false);
         },
@@ -349,7 +357,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       );
     }
 
-    // Target Tumor Focal Point (Glowing Amber Core with Sage Margin Ring)
+    // Target Tumor Focal Point (Glowing Crimson Core with Amber Margin)
     const targetPos = new THREE.Vector3(
       activeCase.targetPosition.x * 0.22,
       activeCase.targetPosition.y * 0.22,
@@ -358,9 +366,9 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
 
     const targetGeo = new THREE.SphereGeometry(3.5, 24, 24);
     const targetMat = new THREE.MeshStandardMaterial({
-      color: 0xc2410c,
+      color: 0xef4444,
       emissive: 0xd97706,
-      emissiveIntensity: 0.85,
+      emissiveIntensity: 0.9,
       roughness: 0.2,
       metalness: 0.2,
     });
@@ -369,25 +377,25 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     targetMeshRef.current = targetMesh;
     scene.add(targetMesh);
 
-    // Safety Margin Halo (Pulsing Sage Wireframe Shell)
+    // Safety Margin Halo (Pulsing Amber Wireframe Shell)
     const haloGeo = new THREE.SphereGeometry(3.5 + activeCase.safetyMarginMm * 0.35, 20, 20);
     const haloMat = new THREE.MeshBasicMaterial({
-      color: 0xCDD5AE,
+      color: 0xfbbf24,
       wireframe: true,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.5,
     });
     const haloMesh = new THREE.Mesh(haloGeo, haloMat);
     haloMesh.position.copy(targetPos);
     scene.add(haloMesh);
 
-    // Primary Surgical Probe Tool (High-Precision Titanium Stylus)
+    // Primary Surgical Probe Tool (High-Precision Titanium Stylus with Cyan Accents)
     const probeGroup = new THREE.Group();
     const handleGeo = new THREE.CylinderGeometry(1.0, 1.0, 24, 16);
     const handleMat = new THREE.MeshStandardMaterial({
-      color: 0xD3A373,
+      color: 0x38bdf8,
       metalness: 0.85,
-      roughness: 0.25,
+      roughness: 0.2,
     });
     const handle = new THREE.Mesh(handleGeo, handleMat);
     handle.position.y = 12;
@@ -395,7 +403,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
 
     const tipGeo = new THREE.ConeGeometry(1.0, 7, 16);
     const tipMat = new THREE.MeshStandardMaterial({
-      color: 0xFEF9E1,
+      color: 0xffffff,
       metalness: 0.95,
       roughness: 0.1,
     });
@@ -413,9 +421,9 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     probeRef.current = probeGroup;
     scene.add(probeGroup);
 
-    // Primary Trajectory Laser Beam (Amber)
+    // Primary Trajectory Laser Beam (Electric Cyan)
     const lineMat = new THREE.LineDashedMaterial({
-      color: 0xD3A373,
+      color: 0x38bdf8,
       dashSize: 2,
       gapSize: 1.2,
       linewidth: 2,
@@ -433,7 +441,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     scene.add(secProbeGroup);
 
     const secLineMat = new THREE.LineDashedMaterial({
-      color: 0xCDD5AE,
+      color: 0xa855f7,
       dashSize: 1.8,
       gapSize: 1.2,
       linewidth: 2,
@@ -553,9 +561,9 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
 
       {/* Model Loading Spinner */}
       {modelLoading && (
-        <div className="absolute inset-0 bg-[#161c13]/70 backdrop-blur-sm flex items-center justify-center gap-2.5 text-[#FAEDCD] text-xs font-bold z-20">
-          <Loader2 className="w-5 h-5 animate-spin text-[#D3A373]" />
-          <span>Normalizing & Rendering High-Precision 3D GLTF Mesh...</span>
+        <div className="absolute inset-0 bg-[#0f172a]/70 backdrop-blur-sm flex items-center justify-center gap-2.5 text-[#e0f2fe] text-xs font-bold z-20">
+          <Loader2 className="w-5 h-5 animate-spin text-[#38bdf8]" />
+          <span>Rendering High-Precision 3D Medical Blue Mesh...</span>
         </div>
       )}
 
@@ -563,7 +571,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       <div className="absolute top-3.5 left-3.5 right-3.5 flex flex-wrap items-center justify-between gap-2 pointer-events-none z-10">
         <div className="flex items-center gap-2 pointer-events-auto">
           <div className="bg-[#FEF9E1]/95 backdrop-blur-md px-3 py-1.5 rounded-xl text-xs font-bold text-[#2e2417] flex items-center gap-2 shadow-md border border-[#E9EDCA]">
-            <span className="w-2 h-2 rounded-full bg-[#CDD5AE] animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-[#0284c7] animate-pulse" />
             <span>3D Surgical Workspace</span>
           </div>
 
@@ -572,7 +580,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
               onClick={() => setModelType('brain')}
               className={`px-3 py-1 rounded-lg transition-all ${
                 modelType === 'brain'
-                  ? 'bg-[#D3A373] text-white shadow-xs font-black'
+                  ? 'bg-[#0284c7] text-white shadow-xs font-black'
                   : 'text-[#5c4a38] hover:text-[#2e2417]'
               }`}
             >
@@ -582,7 +590,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
               onClick={() => setModelType('skull')}
               className={`px-3 py-1 rounded-lg transition-all ${
                 modelType === 'skull'
-                  ? 'bg-[#D3A373] text-white shadow-xs font-black'
+                  ? 'bg-[#0284c7] text-white shadow-xs font-black'
                   : 'text-[#5c4a38] hover:text-[#2e2417]'
               }`}
             >
@@ -592,10 +600,10 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
               onClick={() => setModelType('dual')}
               className={`px-3 py-1 rounded-lg transition-all ${
                 modelType === 'dual'
-                  ? 'bg-[#CDD5AE] text-[#334217] shadow-xs font-black'
+                  ? 'bg-[#38bdf8] text-[#0f172a] shadow-xs font-black'
                   : 'text-[#5c4a38] hover:text-[#2e2417]'
               }`}
-              title="Craniotomy View: Transparent Skull with Internal Brain Cortex"
+              title="Craniotomy View: Platinum Skull with Cyan Internal Brain Cortex"
             >
               ✨ Skull + Brain
             </button>
@@ -649,12 +657,12 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
 
       {/* Bottom Right Legend */}
       <div className="absolute bottom-3 right-3 flex items-center gap-2 pointer-events-none">
-        <div className="bg-[#FEF9E1]/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[#D3A373] text-[10px] text-[#8c5a2b] font-bold flex items-center gap-1.5 shadow-sm">
-          <span className="w-2 h-2 rounded-full bg-[#D3A373] animate-pulse" />
+        <div className="bg-[#FEF9E1]/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[#ef4444] text-[10px] text-[#dc2626] font-bold flex items-center gap-1.5 shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-[#ef4444] animate-pulse" />
           <span>Tumor Target</span>
         </div>
-        <div className="bg-[#FEF9E1]/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[#CDD5AE] text-[10px] text-[#4d5d28] font-bold flex items-center gap-1.5 shadow-sm">
-          <span className="w-2 h-2 rounded-full bg-[#CDD5AE]" />
+        <div className="bg-[#FEF9E1]/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[#38bdf8] text-[10px] text-[#0284c7] font-bold flex items-center gap-1.5 shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-[#38bdf8]" />
           <span>{activeCase.safetyMarginMm}mm Margin Halo</span>
         </div>
       </div>
