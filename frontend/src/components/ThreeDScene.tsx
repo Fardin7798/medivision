@@ -35,7 +35,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
   const [modelLoading, setModelLoading] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [isWireframe, setIsWireframe] = useState(false);
-  const [modelType, setModelType] = useState<'brain' | 'skull' | 'dual'>('brain');
+  const [modelType, setModelType] = useState<'brain' | 'skull'>('brain');
 
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -154,7 +154,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     const BRAIN_COLOR = 0x38bdf8; // Vivid Medical Cyan Blue
     const SKULL_COLOR = 0xe2e8f0; // Platinum Bone Ivory
 
-    // Clean Single-Model Calibrator (Zero duplicate clones)
+    // Clean Single-Model Calibrator
     const calibrateSingleModel = (
       rawModel: THREE.Group,
       type: 'brain' | 'skull',
@@ -202,7 +202,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
             roughness: type === 'brain' ? 0.35 : 0.6,
             metalness: type === 'brain' ? 0.15 : 0.2,
             wireframe: wire,
-            side: type === 'skull' && opacity < 1.0 ? THREE.FrontSide : THREE.DoubleSide,
+            side: THREE.DoubleSide,
             transparent: opacity < 1.0,
             opacity: opacity,
             depthWrite: opacity >= 0.8,
@@ -213,58 +213,19 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       return model;
     };
 
-    if (modelType === 'dual') {
-      let loadedCount = 0;
-      const checkDone = () => {
-        loadedCount++;
-        if (loadedCount >= 2) setModelLoading(false);
-      };
+    const modelUrl = modelType === 'brain' ? '/models/brain.glb' : '/models/skull.glb';
+    const targetDim = modelType === 'brain' ? 34 : 46;
 
-      gltfLoader.load(
-        '/models/brain.glb',
-        (gltf) => {
-          const brain = calibrateSingleModel(gltf.scene, 'brain', 32, 0.96, isWireframe);
-          modelsGroup.add(brain);
-          checkDone();
-        },
-        undefined,
-        () => checkDone()
-      );
-
-      gltfLoader.load(
-        '/models/skull.glb',
-        (gltf) => {
-          const skull = calibrateSingleModel(gltf.scene, 'skull', 46, 0.32, isWireframe);
-          modelsGroup.add(skull);
-          checkDone();
-        },
-        undefined,
-        () => checkDone()
-      );
-    } else if (modelType === 'brain') {
-      gltfLoader.load(
-        '/models/brain.glb',
-        (gltf) => {
-          const brain = calibrateSingleModel(gltf.scene, 'brain', 34, 0.96, isWireframe);
-          modelsGroup.add(brain);
-          setModelLoading(false);
-        },
-        undefined,
-        () => setModelLoading(false)
-      );
-    } else {
-      // Skull Only Mode
-      gltfLoader.load(
-        '/models/skull.glb',
-        (gltf) => {
-          const skull = calibrateSingleModel(gltf.scene, 'skull', 46, 0.95, isWireframe);
-          modelsGroup.add(skull);
-          setModelLoading(false);
-        },
-        undefined,
-        () => setModelLoading(false)
-      );
-    }
+    gltfLoader.load(
+      modelUrl,
+      (gltf) => {
+        const model = calibrateSingleModel(gltf.scene, modelType, targetDim, 0.96, isWireframe);
+        modelsGroup.add(model);
+        setModelLoading(false);
+      },
+      undefined,
+      () => setModelLoading(false)
+    );
 
     // Unified 3D Target Tumor
     const targetWorldPos = toWorldVector(activeCase.targetPosition);
@@ -456,11 +417,11 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       {modelLoading && (
         <div className="absolute inset-0 bg-[#0f172a]/80 flex items-center justify-center gap-2.5 text-[#e0f2fe] text-xs font-bold z-20 font-display">
           <Loader2 className="w-5 h-5 animate-spin text-[#38bdf8]" />
-          <span>Calibrating 3D Anatomical Scene...</span>
+          <span>Loading 3D Anatomical Mesh...</span>
         </div>
       )}
 
-      {/* Top Controls: Solid Floating Toolbar (No Glassmorphism) */}
+      {/* Top Controls: 2 Clean Options Only (Brain Mesh & Skull Mesh) */}
       <div className="absolute top-3.5 left-3.5 right-3.5 flex flex-wrap items-center justify-between gap-2 pointer-events-none z-10">
         <div className="flex items-center gap-2 pointer-events-auto">
           <div className="bg-white px-3 py-1.5 rounded-xl text-xs font-bold text-[#2e2417] flex items-center gap-2 shadow-xs border border-[#E9EDCA] font-display">
@@ -471,7 +432,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
           <div className="flex items-center gap-1 bg-white p-1 rounded-xl text-[11px] font-bold border border-[#E9EDCA] shadow-xs">
             <button
               onClick={() => setModelType('brain')}
-              className={`px-3 py-1 rounded-lg transition-all ${
+              className={`px-3 py-1.5 rounded-lg transition-all font-display ${
                 modelType === 'brain'
                   ? 'bg-[#0284c7] text-white shadow-xs font-black'
                   : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
@@ -481,24 +442,13 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
             </button>
             <button
               onClick={() => setModelType('skull')}
-              className={`px-3 py-1 rounded-lg transition-all ${
+              className={`px-3 py-1.5 rounded-lg transition-all font-display ${
                 modelType === 'skull'
                   ? 'bg-[#0284c7] text-white shadow-xs font-black'
                   : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
               }`}
             >
               💀 Skull Mesh
-            </button>
-            <button
-              onClick={() => setModelType('dual')}
-              className={`px-3 py-1 rounded-lg transition-all ${
-                modelType === 'dual'
-                  ? 'bg-[#38bdf8] text-[#0f172a] shadow-xs font-black'
-                  : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
-              }`}
-              title="Calibrated Craniotomy View"
-            >
-              ✨ Skull + Brain
             </button>
           </div>
         </div>
