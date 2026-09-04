@@ -85,15 +85,27 @@ export const MPRViewports: React.FC<MPRViewportsProps> = ({
     ctx.fillStyle = '#10160d';
     ctx.fill();
 
-    // Dynamic Tumor / Lesion Core
-    const targetX = (activeCase.targetPosition.x / 100) * 45;
-    const targetY = (activeCase.targetPosition.y / 100) * 45;
-    const tumorSliceDist = Math.abs(slicePos - activeCase.targetPosition.z);
+    // Dynamic Tumor Target Core & Safety Margin Calculation based on Axis
+    let targetSlicePos = activeCase.targetPosition.z;
+    let targetPosX = (activeCase.targetPosition.x / 100) * 45;
+    let targetPosY = (activeCase.targetPosition.y / 100) * 45;
 
-    if (tumorSliceDist < 30) {
-      const tumorRadius = Math.max(3, 14 - tumorSliceDist * 0.4);
+    if (plane === 'coronal') {
+      targetSlicePos = activeCase.targetPosition.y;
+      targetPosX = (activeCase.targetPosition.x / 100) * 45;
+      targetPosY = -(activeCase.targetPosition.z / 100) * 45;
+    } else if (plane === 'sagittal') {
+      targetSlicePos = activeCase.targetPosition.x;
+      targetPosX = (activeCase.targetPosition.y / 100) * 45;
+      targetPosY = -(activeCase.targetPosition.z / 100) * 45;
+    }
+
+    const tumorSliceDist = Math.abs(slicePos - targetSlicePos);
+
+    if (tumorSliceDist < 35) {
+      const tumorRadius = Math.max(3, 14 - tumorSliceDist * 0.35);
       ctx.beginPath();
-      ctx.arc(targetX, targetY, tumorRadius, 0, 2 * Math.PI);
+      ctx.arc(targetPosX, targetPosY, tumorRadius, 0, 2 * Math.PI);
       ctx.fillStyle = tumorHue;
       ctx.shadowColor = '#D3A373';
       ctx.shadowBlur = 12;
@@ -102,7 +114,7 @@ export const MPRViewports: React.FC<MPRViewportsProps> = ({
 
       // Safety Margin Ring (Sage dashed)
       ctx.beginPath();
-      ctx.arc(targetX, targetY, tumorRadius + (activeCase.safetyMarginMm * 1.5), 0, 2 * Math.PI);
+      ctx.arc(targetPosX, targetPosY, tumorRadius + (activeCase.safetyMarginMm * 1.5), 0, 2 * Math.PI);
       ctx.strokeStyle = '#CDD5AE';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([3, 3]);

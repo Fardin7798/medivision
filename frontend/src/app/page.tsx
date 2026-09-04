@@ -10,6 +10,7 @@ import { AnatomyAtlasViewer } from '@/components/AnatomyAtlasViewer';
 import { MPRViewports } from '@/components/MPRViewports';
 import { CMPRViewer } from '@/components/CMPRViewer';
 import { NavigationTelemetryHUD } from '@/components/NavigationTelemetryHUD';
+import { MPRControlPanel } from '@/components/MPRControlPanel';
 import { AISegmentationPanel } from '@/components/AISegmentationPanel';
 import { OrganVisibilityPanel } from '@/components/OrganVisibilityPanel';
 import { RegistrationModal } from '@/components/RegistrationModal';
@@ -79,23 +80,25 @@ export default function Home() {
       <Navbar
         activeCase={activeCase}
         onCaseChange={handleCaseChange}
-        onOpenRegistration={() => setIsRegistrationOpen(true)}
-        onOpenUploadModal={() => setIsUploadScanOpen(true)}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        onOpenRegistration={() => setIsRegistrationOpen(true)}
+        onOpenUploadModal={() => setIsUploadScanOpen(true)}
       />
 
-      {/* Main Clinical OR Grid Viewport */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 xl:grid-cols-12 gap-5">
+      {/* Main Multi-Column Surgical Cockpit Layout */}
+      <main className="flex-1 max-w-[1920px] w-full mx-auto p-3.5 sm:p-5 grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">
         
-        {/* Left/Center Column: 3D Studio & Multi-Planar Radiography Slices */}
+        {/* Left/Center Column: 3D Visualization & Multi-Planar Slices */}
         <div className="xl:col-span-8 flex flex-col gap-4">
           
-          {/* Primary Viewport Mode Selector Bar */}
+          {/* 3D Viewport Controls & Engine Switcher */}
           <div className="glass-panel p-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-2 border border-[#E9EDCA]">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#CDD5AE] animate-pulse" />
-              <span className="text-xs font-bold text-[#382e21]">Primary 3D Environment:</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-[#D3A373] animate-pulse" />
+              <h2 className="text-xs uppercase tracking-wider font-extrabold text-[#382e21]">
+                3D Interactive Surgical Suite
+              </h2>
             </div>
 
             <div className="flex gap-1.5 text-xs">
@@ -185,45 +188,57 @@ export default function Home() {
           )}
         </div>
 
-        {/* Right Column: Surgical Guidance HUD, AI Segmentation, & Organ Visibility */}
+        {/* Right Column: Surgical Guidance HUD, MPR Control, AI Segmentation, & Organ Visibility */}
         <div className="xl:col-span-4 flex flex-col gap-4">
           
           {/* Quick Context Sub-Tabs */}
-          <div className="glass-panel p-1.5 rounded-2xl border border-[#E9EDCA] text-xs font-bold flex shadow-xs">
+          <div className="glass-panel p-1.5 rounded-2xl border border-[#E9EDCA] text-xs font-bold grid grid-cols-4 gap-1 shadow-xs">
             <button
               onClick={() => setActiveTab('navigation')}
-              className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+              className={`py-2 px-2 rounded-xl flex items-center justify-center gap-1 transition-all text-center ${
                 activeTab === 'navigation'
-                  ? 'bg-[#D3A373] text-white shadow-md shadow-[#D3A373]/25'
+                  ? 'bg-[#D3A373] text-white shadow-md shadow-[#D3A373]/25 font-black'
                   : 'text-[#6d5d4b] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
               }`}
             >
-              <Crosshair className="w-3.5 h-3.5" />
-              <span>Navigation</span>
+              <Crosshair className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Nav</span>
             </button>
             
             <button
-              onClick={() => setActiveTab('ai')}
-              className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
-                activeTab === 'ai'
-                  ? 'bg-[#CDD5AE] text-[#334217] shadow-md shadow-[#CDD5AE]/30'
+              onClick={() => setActiveTab('mpr')}
+              className={`py-2 px-2 rounded-xl flex items-center justify-center gap-1 transition-all text-center ${
+                activeTab === 'mpr'
+                  ? 'bg-[#D3A373] text-white shadow-md shadow-[#D3A373]/25 font-black'
                   : 'text-[#6d5d4b] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>AI (WebGPU)</span>
+              <Layers className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">MPR</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('ai')}
+              className={`py-2 px-2 rounded-xl flex items-center justify-center gap-1 transition-all text-center ${
+                activeTab === 'ai'
+                  ? 'bg-[#CDD5AE] text-[#334217] shadow-md shadow-[#CDD5AE]/30 font-black'
+                  : 'text-[#6d5d4b] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">AI</span>
             </button>
             
             <button
               onClick={() => setActiveTab('layers')}
-              className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+              className={`py-2 px-2 rounded-xl flex items-center justify-center gap-1 transition-all text-center ${
                 activeTab === 'layers'
-                  ? 'bg-[#E9EDCA] text-[#425020] shadow-md shadow-[#E9EDCA]/40'
+                  ? 'bg-[#E9EDCA] text-[#425020] shadow-md shadow-[#E9EDCA]/40 font-black'
                   : 'text-[#6d5d4b] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
               }`}
             >
-              <Box className="w-3.5 h-3.5" />
-              <span>3D Layers</span>
+              <Box className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">3D Layers</span>
             </button>
           </div>
 
@@ -235,6 +250,18 @@ export default function Home() {
               onPointerMove={setPointerPosition}
               isDualTrajectoryActive={isDualTrajectoryActive}
               onToggleDualTrajectory={() => setIsDualTrajectoryActive(!isDualTrajectoryActive)}
+              onOpenExportModal={() => setIsExportPlanOpen(true)}
+            />
+          )}
+
+          {activeTab === 'mpr' && (
+            <MPRControlPanel
+              activeCase={activeCase}
+              pointerPosition={pointerPosition}
+              telemetry={telemetry}
+              onPointerMove={setPointerPosition}
+              mprSubView={mprSubView}
+              onSubViewChange={setMprSubView}
               onOpenExportModal={() => setIsExportPlanOpen(true)}
             />
           )}
