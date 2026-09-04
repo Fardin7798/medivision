@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Inter, JetBrains_Mono } from "next/font/google";
+import { Outfit, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700", "800", "900"],
   display: "swap",
 });
 
@@ -31,18 +31,18 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "MediVision | 4K Image-Guided Surgery & 3D WebGPU AI",
-  description: "Next-generation Image-Guided Surgery platform featuring sub-millimeter optical navigation, WebGPU AI organ segmentation, 2D/3D Multi-Planar Reconstruction (MPR & CMPR), and dual-solver OR registration.",
+  title: "MediVision | Stereotactic Image-Guided Surgery & Neural Navigation",
+  description: "Next-generation Stereotactic Image-Guided Surgery platform featuring sub-millimeter optical navigation, neural organ segmentation, 2D/3D Multi-Planar Reconstruction (MPR & CMPR), and dual-solver OR registration.",
   keywords: [
+    "Stereotactic Surgery",
     "Image-Guided Surgery",
     "DICOM MPR",
     "Curved Multiplanar Reconstruction",
-    "WebGPU AI Segmentation",
-    "Three.js Medical Atlas",
+    "Neural Segmentation",
     "Surgical Navigation",
     "MediVision"
   ],
-  authors: [{ name: "MediVision Team" }],
+  authors: [{ name: "MediVision Clinical Systems" }],
 };
 
 export default function RootLayout({
@@ -53,7 +53,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plusJakartaSans.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${outfit.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#FEF9E1] text-[#2e2417] font-sans">
         {children}

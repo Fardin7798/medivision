@@ -148,7 +148,7 @@ export default function Home() {
                   }`}
                 >
                   <Crosshair className="w-3.5 h-3.5" />
-                  <span className="font-display">Surgical Trajectory (Three.js)</span>
+                  <span className="font-display">3D Stereotactic Plan</span>
                 </button>
 
                 <button
@@ -160,7 +160,7 @@ export default function Home() {
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[#54682b]" />
-                  <span className="font-display">3D Anatomy Atlas (Ready-Made 4K)</span>
+                  <span className="font-display">Cranial Structure Atlas</span>
                 </button>
               </div>
             </div>
@@ -355,7 +355,7 @@ export default function Home() {
                   <Crosshair className="w-4 h-4 text-[#D3A373]" />
                 </div>
                 <span className="text-[10px] font-mono font-bold bg-[#E9EDCA] text-[#425020] px-2 py-0.5 rounded">
-                  60 FPS / &lt;0.35mm
+                  60 Hz / &lt;0.35mm TRE
                 </span>
               </div>
               <div>
@@ -384,7 +384,7 @@ export default function Home() {
               </div>
               <div>
                 <h4 className="font-display font-bold text-sm text-[#2e2417] mb-1">
-                  In-Browser WebGPU AI Engine
+                  Autonomous Neural Contouring
                 </h4>
                 <p className="text-[#6d5d4b] text-[11px] leading-relaxed">
                   3D UNet and SwinUNETR neural segmentation running directly on client GPU shaders with 100% HIPAA data privacy.

@@ -17,7 +17,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-display: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-outfit), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
@@ -35,6 +35,11 @@ body {
   overflow-x: hidden;
 }
 
+/* Tabular figures utility for surgical numbers & telemetry */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
 /* 21st.dev Solid Clean Panels & Cards (No Glassmorphism) */
 .solid-panel {
   background-color: #FFFFFF;
@@ -44,77 +49,30 @@ body {
 
 .solid-panel-subtle {
   background-color: #FAEDCD;
-  border: 1px solid #E9EDCA;
-  box-shadow: 0 1px 2px 0 rgba(74, 59, 44, 0.03);
+  border: 1px solid rgba(211, 163, 115, 0.35);
 }
 
-.solid-card {
+.solid-card-interactive {
   background-color: #FFFFFF;
   border: 1px solid #E9EDCA;
-  border-radius: 1rem;
-  box-shadow: 0 1px 3px rgba(74, 59, 44, 0.04);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.solid-card:hover {
+.solid-card-interactive:hover {
+  background-color: #FEF9E1;
   border-color: #D3A373;
-  box-shadow: 0 4px 14px -2px rgba(211, 163, 115, 0.12);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgba(74, 59, 44, 0.08);
 }
 
-/* Legacy alias mappings to ensure zero breakage while enforcing solid crisp style */
-.glass-panel {
-  background-color: #FFFFFF;
+/* Surgical Viewport Hairline Focus Rings */
+.viewport-frame {
   border: 1px solid #E9EDCA;
-  box-shadow: 0 1px 3px 0 rgba(74, 59, 44, 0.04), 0 6px 16px -4px rgba(74, 59, 44, 0.05);
+  background: #000000;
+  box-shadow: inset 0 0 0 1px rgba(233, 237, 202, 0.15);
 }
 
-.glass-panel-subtle {
-  background-color: #FAEDCD;
-  border: 1px solid #E9EDCA;
-  box-shadow: 0 1px 2px 0 rgba(74, 59, 44, 0.03);
-}
-
-/* Clean Accent Glows */
-.glow-caramel {
-  box-shadow: 0 2px 14px rgba(211, 163, 115, 0.28);
-}
-
-.glow-sage {
-  box-shadow: 0 2px 14px rgba(205, 213, 174, 0.35);
-}
-
-.glow-critical {
-  box-shadow: 0 2px 16px rgba(239, 68, 68, 0.25);
-}
-
-/* Custom Earth Range Slider */
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  background: #E9EDCA;
-  border-radius: 9999px;
-  outline: none;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: #D3A373;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(211, 163, 115, 0.45);
-  border: 2px solid #FFFFFF;
-  transition: transform 0.1s ease, background-color 0.1s ease;
-}
-
-input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-  background: #be8e5e;
-}
-
-/* Custom Sleek Scrollbar */
+/* Clean scrollbar matching warm earth palette */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -126,28 +84,9 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 ::-webkit-scrollbar-thumb {
   background: #CDD5AE;
-  border-radius: 9999px;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #b5c08e;
-}
-
-/* Radar Scope Pulse Animation */
-@keyframes radar-sweep {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.animate-radar-sweep {
-  animation: radar-sweep 4s linear infinite;
-}
-
-@keyframes pulse-soft {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(0.97); }
-}
-
-.animate-pulse-soft {
-  animation: pulse-soft 2.4s ease-in-out infinite;
+  background: #D3A373;
 }

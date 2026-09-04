@@ -58,17 +58,17 @@ export const AISegmentationPanel: React.FC<AISegmentationPanelProps> = ({
           </div>
           <div>
             <h2 className="text-xs uppercase tracking-wider font-extrabold text-[#2e2417] font-display">
-              WebGPU AI & Clinical Copilot
+              Neural Segmentation & Clinical Copilot
             </h2>
             <p className="text-[10px] text-[#6d5d4b]">
-              Local ONNX Segmentation + Puter Keyless AI
+              On-Device Neural Contouring + Puter Copilot
             </p>
           </div>
         </div>
 
         <span className="text-[10px] bg-[#E9EDCA] text-[#3e4c1f] font-mono px-2.5 py-0.5 rounded-full border border-[#CDD5AE] font-bold flex items-center gap-1">
           <Cpu className="w-3 h-3 text-[#54682b]" />
-          WebGPU Active
+          Neural Engine: Active
         </span>
       </div>
 
@@ -127,7 +127,7 @@ export const AISegmentationPanel: React.FC<AISegmentationPanelProps> = ({
         }`}
       >
         <RefreshCw className={`w-4 h-4 ${isInferring ? 'animate-spin' : ''}`} />
-        <span className="font-display">{isInferring ? 'Computing WebGPU Tensors (12ms)...' : 'Run Live WebGPU Inference'}</span>
+        <span className="font-display">{isInferring ? 'Computing Neural Contours (12ms)...' : 'Execute Automated Contouring'}</span>
       </button>
 
       {/* Confidence Cutoff Slider */}

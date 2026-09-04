@@ -73,11 +73,11 @@ export const AnatomyAtlasViewer: React.FC = () => {
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-[#D3A373]" />
           <h2 className="text-xs uppercase tracking-wider font-bold text-[#2e2417] font-display">
-            3D Anatomy Atlas (Ready-Made 4K Cloud Models)
+            Cranial Anatomy Atlas & Volumetric Reference
           </h2>
           <span className="text-[10px] bg-[#E9EDCA] text-[#485626] font-mono px-2.5 py-0.5 rounded-full border border-[#CDD5AE] font-semibold flex items-center gap-1 shadow-xs">
             <ShieldCheck className="w-3 h-3 text-[#5c6e2f]" />
-            100% Medical Grade Models
+            Stereotactic Reference Volume
           </span>
         </div>
 

@@ -301,7 +301,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
             <span className="w-2 h-2 rounded-full bg-[#D3A373]" />
             Pointer Tip (RAS mm)
           </div>
-          <div className="font-mono space-y-1 text-xs text-[#2e2417]">
+          <div className="font-mono tabular-nums space-y-1 text-xs text-[#2e2417]">
             <div className="flex justify-between"><span>X:</span> <strong className="text-[#784819]">{telemetry.pointerPosition.x.toFixed(1)}</strong></div>
             <div className="flex justify-between"><span>Y:</span> <strong className="text-[#784819]">{telemetry.pointerPosition.y.toFixed(1)}</strong></div>
             <div className="flex justify-between"><span>Z:</span> <strong className="text-[#784819]">{telemetry.pointerPosition.z.toFixed(1)}</strong></div>
@@ -313,7 +313,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
             <span className="w-2 h-2 rounded-full bg-[#CDD5AE]" />
             Target Focal Point
           </div>
-          <div className="font-mono space-y-1 text-xs text-[#2e2417]">
+          <div className="font-mono tabular-nums space-y-1 text-xs text-[#2e2417]">
             <div className="flex justify-between"><span>X:</span> <strong className="text-[#4e6024]">{telemetry.targetPosition.x.toFixed(1)}</strong></div>
             <div className="flex justify-between"><span>Y:</span> <strong className="text-[#4e6024]">{telemetry.targetPosition.y.toFixed(1)}</strong></div>
             <div className="flex justify-between"><span>Z:</span> <strong className="text-[#4e6024]">{telemetry.targetPosition.z.toFixed(1)}</strong></div>
@@ -331,13 +331,13 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
         </div>
         <div>
           <div className="text-[10px] text-[#7d6b56] font-semibold font-display">Azimuth (α)</div>
-          <div className="font-mono font-bold text-[#D3A373] mt-0.5 text-xs">
+          <div className="font-mono tabular-nums font-bold text-[#D3A373] mt-0.5 text-xs">
             {telemetry.trajectory.azimuthDeg.toFixed(1)}°
           </div>
         </div>
         <div>
           <div className="text-[10px] text-[#7d6b56] font-semibold font-display">Elevation (β)</div>
-          <div className="font-mono font-bold text-[#5c6e2f] mt-0.5 text-xs">
+          <div className="font-mono tabular-nums font-bold text-[#5c6e2f] mt-0.5 text-xs">
             {telemetry.trajectory.elevationDeg.toFixed(1)}°
           </div>
         </div>
@@ -373,7 +373,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
       {/* Optical Tracker Active Status Readout */}
       {isOpticalTrackingActive && (
         <div className="bg-[#E9EDCA] border border-[#CDD5AE] rounded-xl p-2.5 text-[11px] font-mono flex items-center justify-between text-[#38461b]">
-          <span>NDI Polaris: 60 FPS</span>
+          <span>Polaris Spectra: 60 Hz Tracked</span>
           <span>RMS: &lt;{opticalStatus.rmsErrorMm.toFixed(2)} mm</span>
           <span className="text-[#4e6024] font-bold">Q: {(opticalStatus.quality * 100).toFixed(1)}%</span>
         </div>
@@ -432,7 +432,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
           }`}
         >
           <Play className="w-4 h-4 fill-current" />
-          <span className="font-display">{isSimulating ? 'Pause Navigation' : 'Simulate Trajectory'}</span>
+          <span className="font-display">{isSimulating ? 'Pause Navigation' : 'Interactive Tracking Demo'}</span>
         </button>
 
         <button

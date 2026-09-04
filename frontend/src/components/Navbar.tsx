@@ -68,9 +68,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-[#6d5d4b] hidden md:flex items-center gap-1.5">
-              <span className="font-medium">Image-Guided Surgery & 3D WebGPU AI</span>
+              <span className="font-medium">Stereotactic Surgical Navigation & AI</span>
               <span className="text-[#CDD5AE]">•</span>
-              <span className="text-[#8c5a2b] font-mono text-[10px] font-bold">60 FPS Optical Stream</span>
+              <span className="text-[#8c5a2b] font-mono text-[10px] font-bold">60 Hz Optical Stream</span>
             </p>
           </div>
         </div>
@@ -110,7 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-[#445220]" />
-            <span>AI (WebGPU)</span>
+            <span>AI Segmentation</span>
           </button>
 
           <button
