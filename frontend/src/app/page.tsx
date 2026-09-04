@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Navbar } from '../components/Navbar';
 import { ThreeDScene } from '../components/ThreeDScene';
+import { AnatomyAtlasViewer } from '../components/AnatomyAtlasViewer';
 import { MPRViewports } from '../components/MPRViewports';
 import { CMPRViewer } from '../components/CMPRViewer';
 import { NavigationTelemetryHUD } from '../components/NavigationTelemetryHUD';
@@ -14,7 +15,7 @@ import { CustomScanUploadModal } from '../components/CustomScanUploadModal';
 import { PRESET_CASES } from '../data/presetCases';
 import { PatientCase, Point3D, SurgicalTelemetry } from '../types';
 import { computeTelemetry } from '../lib/math/navigation';
-import { Crosshair, Layers, Sparkles, Box, ShieldCheck, FileDown, GitCommit } from 'lucide-react';
+import { Crosshair, Layers, Sparkles, Box, ShieldCheck, FileDown, GitCommit, Orbit } from 'lucide-react';
 
 export default function Home() {
   const [activeCase, setActiveCase] = useState<PatientCase>(PRESET_CASES[0]);
@@ -25,6 +26,7 @@ export default function Home() {
   const [isUploadScanOpen, setIsUploadScanOpen] = useState(false);
   const [isDualTrajectoryActive, setIsDualTrajectoryActive] = useState(false);
   const [mprSubView, setMprSubView] = useState<'orthogonal' | 'cmpr'>('orthogonal');
+  const [viewportMode, setViewportMode] = useState<'navigation' | 'atlas'>('navigation');
 
   // Compute live surgical telemetry
   const telemetry: SurgicalTelemetry = computeTelemetry(
@@ -73,12 +75,48 @@ export default function Home() {
       <main className="flex-1 p-4 max-w-[1920px] w-full mx-auto grid grid-cols-1 xl:grid-cols-12 gap-4">
         {/* Left Column: Interactive 3D Anatomy Scene & 4-Quadrant MPR / CMPR Viewports */}
         <div className="xl:col-span-8 flex flex-col gap-4">
-          {/* Primary 3D Viewport */}
-          <ThreeDScene
-            activeCase={activeCase}
-            pointerPosition={pointerPosition}
-            isDualTrajectoryActive={isDualTrajectoryActive}
-          />
+          {/* Primary Viewport Header: Mode Switcher (Surgical 3D vs 3D Anatomy Atlas) */}
+          <div className="flex items-center justify-between bg-slate-900/80 p-2 rounded-2xl border border-slate-800">
+            <div className="flex items-center gap-2">
+              <Orbit className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs font-bold text-slate-200">3D Display Mode:</span>
+            </div>
+            <div className="flex gap-1.5 text-xs">
+              <button
+                onClick={() => setViewportMode('navigation')}
+                className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all ${
+                  viewportMode === 'navigation'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Crosshair className="w-3.5 h-3.5" />
+                <span>Surgical Trajectory (Three.js)</span>
+              </button>
+              <button
+                onClick={() => setViewportMode('atlas')}
+                className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all ${
+                  viewportMode === 'atlas'
+                    ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-md shadow-pink-600/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>3D Anatomy Atlas (4K Deployed)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Primary 3D Viewport Render */}
+          {viewportMode === 'navigation' ? (
+            <ThreeDScene
+              activeCase={activeCase}
+              pointerPosition={pointerPosition}
+              isDualTrajectoryActive={isDualTrajectoryActive}
+            />
+          ) : (
+            <AnatomyAtlasViewer />
+          )}
 
           {/* Viewport Sub-Switch (Orthogonal MPR vs Curved CMPR) */}
           <div className="flex items-center justify-between bg-slate-900/60 p-2 rounded-xl border border-slate-800">
