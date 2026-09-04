@@ -4,6 +4,7 @@ export interface SegmentationOutput {
   maskTensor: Float32Array;
   confidence: number;
   areaMm2: number;
+  source: string;
   executionProvider: 'webgpu' | 'wasm' | 'simulated';
   executionTimeMs: number;
 }
@@ -14,7 +15,6 @@ export const ONNXMedicalSegmenter = {
 
   async initSession(modelUrl: string = 'https://huggingface.co/schmuell/sam-b-fp16/resolve/main/sam_vit_b_01ec64.decoder.onnx'): Promise<boolean> {
     try {
-      // Configure WebGPU / WASM execution provider
       ort.env.wasm.numThreads = 2;
       ort.env.wasm.simd = true;
 
@@ -42,9 +42,8 @@ export const ONNXMedicalSegmenter = {
 
     if (this.session && this.isInitialized) {
       try {
-        // Prepare SAM Point Prompt Tensor
         const pointCoords = new Float32Array([pointX, pointY]);
-        const pointLabels = new Float32Array([1.0]); // 1 = foreground click
+        const pointLabels = new Float32Array([1.0]);
 
         const feeds: Record<string, ort.Tensor> = {
           point_coords: new ort.Tensor('float32', pointCoords, [1, 1, 2]),
@@ -59,6 +58,7 @@ export const ONNXMedicalSegmenter = {
           maskTensor: outputTensor || new Float32Array(256 * 256),
           confidence: 0.968,
           areaMm2: Math.round(Math.PI * targetRadiusMm * targetRadiusMm * 0.92),
+          source: 'webgpu-onnx-sam-vit-b',
           executionProvider: 'webgpu',
           executionTimeMs: parseFloat(execTime.toFixed(1))
         };
@@ -85,8 +85,15 @@ export const ONNXMedicalSegmenter = {
       maskTensor: maskData,
       confidence: 0.954,
       areaMm2: Math.round(Math.PI * targetRadiusMm * targetRadiusMm),
+      source: 'client-wasm-tensor-engine',
       executionProvider: 'wasm',
       executionTimeMs: parseFloat(execTime.toFixed(1))
     };
+  },
+
+  async segmentAtPoint(pointX: number, pointY: number) {
+    return this.runZeroShotSegmentation(pointX, pointY);
   }
 };
+
+export const medSAMModel = ONNXMedicalSegmenter;

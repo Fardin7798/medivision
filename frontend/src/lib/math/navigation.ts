@@ -58,3 +58,5 @@ export function computeTelemetry(
     targetPosition
   };
 }
+
+export const calculateNavigationTelemetry = computeTelemetry;

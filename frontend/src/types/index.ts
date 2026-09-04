@@ -7,6 +7,8 @@ export interface Point3D {
   z: number;
 }
 
+export type Vector3D = Point3D;
+
 export interface AnatomicalStructure {
   id: string;
   name: string;
@@ -40,7 +42,8 @@ export interface PatientCase {
   fiducials: FiducialLandmark[];
 }
 
-export type MarginStatus = 'SAFE' | 'APPROACHING' | 'CRITICAL';
+export type ClinicalCase = PatientCase;
+export type MarginStatus = 'SAFE' | 'APPROACHING' | 'CRITICAL' | 'BREACHED';
 
 export interface SurgicalTelemetry {
   distanceMm: number;
@@ -58,6 +61,8 @@ export interface SurgicalTelemetry {
   secondaryDistanceMm?: number;
   secondaryMarginStatus?: MarginStatus;
 }
+
+export type NavigationTelemetry = SurgicalTelemetry;
 
 export interface RegistrationResult {
   pairedLandmarks: number;

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Eye, EyeOff, Layers } from 'lucide-react';
+import { Box, Eye, EyeOff } from 'lucide-react';
 import { AnatomicalStructure } from '../types';
 
 interface OrganVisibilityPanelProps {
@@ -16,19 +16,19 @@ export const OrganVisibilityPanel: React.FC<OrganVisibilityPanelProps> = ({
   onOpacityChange
 }) => {
   return (
-    <div className="glass-panel rounded-3xl p-4 text-slate-100 shadow-2xl flex flex-col gap-3.5 border border-slate-800">
+    <div className="glass-panel rounded-3xl p-4 text-[#2e2417] shadow-md flex flex-col gap-3.5 border border-[#E9EDCA]">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+      <div className="flex items-center justify-between border-b border-[#E9EDCA] pb-3">
         <div className="flex items-center gap-2">
-          <Box className="w-5 h-5 text-blue-400" />
+          <Box className="w-5 h-5 text-[#D3A373]" />
           <div>
-            <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-200">
+            <h3 className="text-xs uppercase font-extrabold tracking-wider text-[#2e2417]">
               3D Anatomical Organ Layers
             </h3>
-            <p className="text-[10px] text-slate-400 font-mono">Shader Alpha & Visibility</p>
+            <p className="text-[10px] text-[#7d6b56] font-mono">Shader Alpha & Visibility</p>
           </div>
         </div>
-        <span className="text-[10px] bg-blue-950/80 text-blue-300 px-2.5 py-1 rounded-full border border-blue-800/60 font-bold">
+        <span className="text-[10px] bg-[#E9EDCA] text-[#445220] px-2.5 py-1 rounded-full border border-[#CDD5AE] font-bold shadow-xs">
           {structures.filter((s) => s.visible).length}/{structures.length} Visible
         </span>
       </div>
@@ -40,21 +40,21 @@ export const OrganVisibilityPanel: React.FC<OrganVisibilityPanelProps> = ({
             key={structure.id}
             className={`p-3 rounded-2xl border transition-all ${
               structure.visible
-                ? 'bg-slate-950/80 border-slate-800 shadow-md hover:border-slate-700'
-                : 'bg-slate-950/40 border-slate-800/40 opacity-50'
+                ? 'bg-white border-[#E9EDCA] shadow-xs hover:border-[#D3A373]'
+                : 'bg-[#FAEDCD]/40 border-[#E9EDCA]/60 opacity-60'
             }`}
           >
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5">
                 <span
-                  className="w-3.5 h-3.5 rounded-full border border-white/30 shadow-md"
+                  className="w-3.5 h-3.5 rounded-full border border-[#E9EDCA] shadow-xs"
                   style={{ backgroundColor: structure.color }}
                 />
                 <div>
-                  <span className="text-xs font-bold text-white block">
+                  <span className="text-xs font-bold text-[#2e2417] block">
                     {structure.name}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono uppercase">
+                  <span className="text-[10px] text-[#7d6b56] font-mono uppercase font-semibold">
                     {structure.type || 'ORGAN'}
                   </span>
                 </div>
@@ -64,8 +64,8 @@ export const OrganVisibilityPanel: React.FC<OrganVisibilityPanelProps> = ({
                 onClick={() => onToggleVisibility(structure.id)}
                 className={`p-2 rounded-xl transition-all border ${
                   structure.visible
-                    ? 'bg-cyan-950/80 border-cyan-500/50 text-cyan-300 shadow-sm'
-                    : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-300'
+                    ? 'bg-[#E9EDCA] border-[#CDD5AE] text-[#3e4c1f] shadow-xs'
+                    : 'bg-[#FAEDCD] border-[#E9EDCA] text-[#7d6b56] hover:text-[#2e2417]'
                 }`}
                 title={structure.visible ? 'Hide structure' : 'Show structure'}
               >
@@ -75,8 +75,8 @@ export const OrganVisibilityPanel: React.FC<OrganVisibilityPanelProps> = ({
 
             {/* Opacity Scrubber Slider */}
             {structure.visible && (
-              <div className="mt-2.5 pt-2 border-t border-slate-900 flex items-center gap-2.5">
-                <span className="text-[10px] text-slate-400 font-mono">Alpha:</span>
+              <div className="mt-2.5 pt-2 border-t border-[#E9EDCA] flex items-center gap-2.5">
+                <span className="text-[10px] text-[#7d6b56] font-mono">Alpha:</span>
                 <input
                   type="range"
                   min="0.1"
@@ -84,9 +84,9 @@ export const OrganVisibilityPanel: React.FC<OrganVisibilityPanelProps> = ({
                   step="0.05"
                   value={structure.opacity}
                   onChange={(e) => onOpacityChange(structure.id, parseFloat(e.target.value))}
-                  className="flex-1 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                  className="flex-1 cursor-pointer h-1.5 bg-[#E9EDCA] rounded-lg"
                 />
-                <span className="text-[10px] font-mono text-cyan-300 font-bold w-9 text-right">
+                <span className="text-[10px] font-mono text-[#D3A373] font-bold w-9 text-right">
                   {(structure.opacity * 100).toFixed(0)}%
                 </span>
               </div>
