@@ -10,10 +10,11 @@
 
 ---
 
-## 🌐 Live URLs
+## 🌐 Live URLs & Documentation
 * 🚀 **Live Production App**: **[https://frontend-kappa-silk-42.vercel.app](https://frontend-kappa-silk-42.vercel.app)**
 * ⚡ **Live Health API**: **[https://frontend-kappa-silk-42.vercel.app/api/health](https://frontend-kappa-silk-42.vercel.app/api/health)**
-* 📖 **Master Technical Report & Presentation Guide**: **[docs/PROJECT_COMPLETE_REPORT.md](docs/PROJECT_COMPLETE_REPORT.md)**
+* 📖 **The Ultimate Master Guide & 360° Q&A (Aasan Bhasha Me)**: **[GUIDE.md](GUIDE.md)**
+* 📄 **Technical Master Report & Presentation Guide**: **[docs/PROJECT_COMPLETE_REPORT.md](docs/PROJECT_COMPLETE_REPORT.md)**
 
 ---
 
