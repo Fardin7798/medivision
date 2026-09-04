@@ -12,7 +12,10 @@ import {
   Volume2,
   VolumeX,
   FileDown,
-  Play
+  Play,
+  Compass,
+  Gauge,
+  Crosshair
 } from 'lucide-react';
 import { OpticalTrackerStream } from '../lib/hardware/opticalTracker';
 
@@ -171,23 +174,26 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
   const statusConfig = {
     SAFE: {
       color: 'text-emerald-400',
-      bgColor: 'bg-emerald-950/40 border-emerald-800',
+      bgColor: 'bg-emerald-950/40 border-emerald-800/80',
+      glow: 'glow-emerald',
       icon: CheckCircle2,
-      label: 'SAFE CORRIDOR',
+      label: 'SAFE SURGICAL CORRIDOR',
       pulse: false
     },
     APPROACHING: {
       color: 'text-amber-400',
-      bgColor: 'bg-amber-950/40 border-amber-800',
+      bgColor: 'bg-amber-950/40 border-amber-800/80',
+      glow: '',
       icon: AlertTriangle,
-      label: 'APPROACHING MARGIN',
+      label: 'APPROACHING 5MM MARGIN',
       pulse: true
     },
     CRITICAL: {
       color: 'text-red-400',
-      bgColor: 'bg-red-950/60 border-red-600 shadow-lg shadow-red-900/40',
+      bgColor: 'bg-red-950/70 border-red-500 shadow-2xl',
+      glow: 'glow-critical',
       icon: AlertTriangle,
-      label: 'CRITICAL BOUNDARY (<5mm)',
+      label: 'CRITICAL BOUNDARY (<5MM)',
       pulse: true
     }
   };
@@ -196,52 +202,64 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
   const StatusIcon = currentStatus.icon;
 
   return (
-    <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-2xl p-4 text-slate-100 flex flex-col gap-4 shadow-2xl relative overflow-hidden">
-      {/* HUD Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+    <div className={`glass-panel rounded-3xl p-4 text-slate-100 flex flex-col gap-4 shadow-2xl relative overflow-hidden border border-slate-800 ${currentStatus.glow}`}>
+      
+      {/* HUD Header with Audio Toggle & Real-time Rate */}
+      <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
         <div className="flex items-center gap-2">
           <Activity className="w-5 h-5 text-cyan-400 animate-pulse" />
-          <h2 className="font-bold text-sm tracking-wide">SURGICAL TELEMETRY HUD</h2>
+          <div>
+            <h2 className="font-extrabold text-sm tracking-wide text-white">SURGICAL TELEMETRY HUD</h2>
+            <p className="text-[10px] text-slate-400 font-mono">AVIONICS GUIDANCE MATRIX</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setIsAudioMuted(!isAudioMuted)}
-            className={`p-1.5 rounded-lg border transition-colors ${
+            className={`p-2 rounded-xl border transition-all ${
               isAudioMuted
                 ? 'bg-slate-800 border-slate-700 text-slate-500'
-                : 'bg-cyan-950/80 border-cyan-500/50 text-cyan-300'
+                : 'bg-cyan-950/80 border-cyan-500/60 text-cyan-300 shadow-sm'
             }`}
-            title={isAudioMuted ? 'Unmute Proximity Alerts' : 'Mute Proximity Alerts'}
+            title={isAudioMuted ? 'Unmute Proximity Alarm' : 'Mute Proximity Alarm'}
           >
-            {isAudioMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            {isAudioMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
-          <div className="text-[10px] font-mono bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800">
-            REAL-TIME 60Hz
+          <div className="text-[10px] font-mono bg-cyan-950/90 text-cyan-300 px-2.5 py-1 rounded-xl border border-cyan-700/60 font-bold">
+            60 Hz NDI
           </div>
         </div>
       </div>
 
-      {/* Safety Status Banner */}
-      <div className={`flex items-center justify-between p-3 rounded-xl border transition-all ${currentStatus.bgColor}`}>
-        <div className="flex items-center gap-2">
+      {/* Primary Safety Status Banner */}
+      <div className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${currentStatus.bgColor}`}>
+        <div className="flex items-center gap-2.5">
           <StatusIcon className={`w-5 h-5 ${currentStatus.color} ${currentStatus.pulse ? 'animate-bounce' : ''}`} />
-          <span className={`text-xs font-bold tracking-wider ${currentStatus.color}`}>
-            {currentStatus.label}
-          </span>
+          <div>
+            <span className={`text-xs font-black tracking-wider block ${currentStatus.color}`}>
+              {currentStatus.label}
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono">
+              Margin Threshold: {activeCase.safetyMarginMm}.0 mm
+            </span>
+          </div>
         </div>
         <div className="text-right">
-          <div className="text-[10px] text-slate-400">Target Distance</div>
-          <div className={`font-mono text-sm font-black ${currentStatus.color}`}>
-            {telemetry.distanceMm.toFixed(1)} <span className="text-[10px]">mm</span>
+          <div className="text-[10px] text-slate-400 uppercase font-bold">Target Distance</div>
+          <div className={`font-mono text-base font-black ${currentStatus.color}`}>
+            {telemetry.distanceMm.toFixed(1)} <span className="text-xs">mm</span>
           </div>
         </div>
       </div>
 
-      {/* Target Proximity Distance Gauge */}
-      <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-2">
-        <div className="flex justify-between items-center text-xs">
-          <span className="text-slate-400 font-medium">Tip-to-Target Distance</span>
+      {/* Target Proximity Dynamic Gauge Bar */}
+      <div className="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800/80 space-y-2.5">
+        <div className="flex justify-between items-center text-xs font-semibold">
+          <span className="text-slate-400 flex items-center gap-1.5">
+            <Gauge className="w-3.5 h-3.5 text-cyan-400" />
+            Tip-to-Target Proximity Gauge
+          </span>
           <div className="flex items-baseline gap-1">
             <span className={`font-mono text-base font-bold ${currentStatus.color}`}>
               {telemetry.distanceMm.toFixed(1)}
@@ -255,7 +273,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
           <div
             className={`h-full transition-all duration-200 ${
               telemetry.marginStatus === 'CRITICAL'
-                ? 'bg-red-500 shadow-md shadow-red-500/50'
+                ? 'bg-red-500 shadow-lg shadow-red-500/80'
                 : telemetry.marginStatus === 'APPROACHING'
                 ? 'bg-amber-500'
                 : 'bg-gradient-to-r from-cyan-500 to-emerald-400'
@@ -271,63 +289,63 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
         </div>
       </div>
 
-      {/* Spatial Coordinates 2-Column Grid */}
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
-          <div className="text-slate-400 text-[10px] mb-1 font-semibold flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+      {/* 3D Coordinates Grid (Pointer Tip vs Target Focal Point) */}
+      <div className="grid grid-cols-2 gap-2.5 text-xs">
+        <div className="bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
+          <div className="text-slate-400 text-[10px] mb-1.5 font-bold flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-cyan-400" />
             Pointer Tip (RAS mm)
           </div>
-          <div className="font-mono space-y-0.5 text-[11px] text-slate-200">
-            <div>X: <strong className="text-cyan-300">{telemetry.pointerPosition.x.toFixed(1)}</strong></div>
-            <div>Y: <strong className="text-cyan-300">{telemetry.pointerPosition.y.toFixed(1)}</strong></div>
-            <div>Z: <strong className="text-cyan-300">{telemetry.pointerPosition.z.toFixed(1)}</strong></div>
+          <div className="font-mono space-y-1 text-xs text-slate-200">
+            <div className="flex justify-between"><span>X:</span> <strong className="text-cyan-300">{telemetry.pointerPosition.x.toFixed(1)}</strong></div>
+            <div className="flex justify-between"><span>Y:</span> <strong className="text-cyan-300">{telemetry.pointerPosition.y.toFixed(1)}</strong></div>
+            <div className="flex justify-between"><span>Z:</span> <strong className="text-cyan-300">{telemetry.pointerPosition.z.toFixed(1)}</strong></div>
           </div>
         </div>
 
-        <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
-          <div className="text-slate-400 text-[10px] mb-1 font-semibold flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+        <div className="bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
+          <div className="text-slate-400 text-[10px] mb-1.5 font-bold flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-red-400" />
             Target Focal Point
           </div>
-          <div className="font-mono space-y-0.5 text-[11px] text-slate-200">
-            <div>X: <strong className="text-emerald-300">{telemetry.targetPosition.x.toFixed(1)}</strong></div>
-            <div>Y: <strong className="text-emerald-300">{telemetry.targetPosition.y.toFixed(1)}</strong></div>
-            <div>Z: <strong className="text-emerald-300">{telemetry.targetPosition.z.toFixed(1)}</strong></div>
+          <div className="font-mono space-y-1 text-xs text-slate-200">
+            <div className="flex justify-between"><span>X:</span> <strong className="text-emerald-300">{telemetry.targetPosition.x.toFixed(1)}</strong></div>
+            <div className="flex justify-between"><span>Y:</span> <strong className="text-emerald-300">{telemetry.targetPosition.y.toFixed(1)}</strong></div>
+            <div className="flex justify-between"><span>Z:</span> <strong className="text-emerald-300">{telemetry.targetPosition.z.toFixed(1)}</strong></div>
           </div>
         </div>
       </div>
 
-      {/* Trajectory Insertion Angles */}
-      <div className="grid grid-cols-3 gap-2 text-center text-xs bg-slate-950/40 p-2.5 rounded-xl border border-slate-800">
+      {/* Trajectory Angles & Insertion Depth */}
+      <div className="grid grid-cols-3 gap-2 text-center text-xs bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
         <div>
-          <div className="text-[10px] text-slate-400">Insertion Depth</div>
-          <div className="font-mono font-bold text-slate-200 mt-0.5">
+          <div className="text-[10px] text-slate-400 font-semibold">Insertion Depth</div>
+          <div className="font-mono font-bold text-slate-200 mt-0.5 text-xs">
             {telemetry.trajectory.totalDepthMm.toFixed(1)} <span className="text-[10px] text-slate-400">mm</span>
           </div>
         </div>
         <div>
-          <div className="text-[10px] text-slate-400">Azimuth Angle (α)</div>
-          <div className="font-mono font-bold text-cyan-400 mt-0.5">
+          <div className="text-[10px] text-slate-400 font-semibold">Azimuth (α)</div>
+          <div className="font-mono font-bold text-cyan-400 mt-0.5 text-xs">
             {telemetry.trajectory.azimuthDeg.toFixed(1)}°
           </div>
         </div>
         <div>
-          <div className="text-[10px] text-slate-400">Elevation (β)</div>
-          <div className="font-mono font-bold text-blue-400 mt-0.5">
+          <div className="text-[10px] text-slate-400 font-semibold">Elevation (β)</div>
+          <div className="font-mono font-bold text-blue-400 mt-0.5 text-xs">
             {telemetry.trajectory.elevationDeg.toFixed(1)}°
           </div>
         </div>
       </div>
 
-      {/* Dual Trajectory & 60Hz Optical Tracking Toggles */}
+      {/* Dual Trajectory & Optical Tracking Toggles */}
       <div className="grid grid-cols-2 gap-2 text-xs">
         <button
           onClick={onToggleDualTrajectory}
           className={`py-2 px-3 rounded-xl border font-bold flex items-center justify-center gap-1.5 transition-all ${
             isDualTrajectoryActive
               ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-md shadow-purple-900/40'
-              : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+              : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:border-slate-700'
           }`}
         >
           <Layers className="w-3.5 h-3.5 text-purple-400" />
@@ -339,7 +357,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
           className={`py-2 px-3 rounded-xl border font-bold flex items-center justify-center gap-1.5 transition-all ${
             isOpticalTrackingActive
               ? 'bg-cyan-950/80 border-cyan-400 text-cyan-200 shadow-md shadow-cyan-900/40'
-              : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+              : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:border-slate-700'
           }`}
         >
           <Radio className={`w-3.5 h-3.5 ${isOpticalTrackingActive ? 'text-cyan-400 animate-pulse' : 'text-slate-400'}`} />
@@ -357,9 +375,12 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
       )}
 
       {/* Interactive Manual Probe Sliders */}
-      <div className="space-y-2 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
-        <div className="flex justify-between items-center text-xs font-semibold text-slate-300">
-          <span>PROBE OR STYLUS SLIDER (MM)</span>
+      <div className="space-y-2.5 bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800">
+        <div className="flex justify-between items-center text-xs font-bold text-slate-300">
+          <span className="flex items-center gap-1.5">
+            <Crosshair className="w-3.5 h-3.5 text-cyan-400" />
+            MANUAL PROBE POSITION (MM)
+          </span>
           {onOpenExportModal && (
             <button
               onClick={onOpenExportModal}
@@ -372,7 +393,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
         </div>
 
         {(['x', 'y', 'z'] as const).map((axis) => (
-          <div key={axis} className="flex items-center gap-2 text-xs font-mono">
+          <div key={axis} className="flex items-center gap-2.5 text-xs font-mono">
             <span className="w-3 uppercase font-bold text-slate-400">{axis}</span>
             <input
               type="range"
@@ -386,7 +407,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
                   [axis]: parseFloat(e.target.value)
                 })
               }
-              className="flex-1 accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+              className="flex-1 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
             />
             <span className="w-12 text-right text-slate-300">
               {telemetry.pointerPosition[axis].toFixed(1)}
@@ -396,23 +417,23 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
       </div>
 
       {/* Trajectory Simulation & Reset Action Buttons */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 pt-1">
         <button
           onClick={handleToggleSimulation}
-          className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md ${
+          className={`flex-1 py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md ${
             isSimulating
-              ? 'bg-amber-600 hover:bg-amber-500 text-slate-950'
-              : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-cyan-500/20'
+              ? 'bg-amber-600 hover:bg-amber-500 text-slate-950 shadow-amber-500/20'
+              : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-cyan-500/20'
           }`}
         >
-          <Play className="w-3.5 h-3.5 fill-current" />
-          <span>{isSimulating ? 'Pause Trajectory' : 'Simulate Trajectory'}</span>
+          <Play className="w-4 h-4 fill-current" />
+          <span>{isSimulating ? 'Pause Navigation' : 'Simulate Trajectory'}</span>
         </button>
 
         <button
           onClick={handleResetPosition}
-          className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700"
-          title="Reset to planned skull entry point"
+          className="p-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700"
+          title="Reset probe to entry port"
         >
           <RotateCcw className="w-4 h-4" />
         </button>

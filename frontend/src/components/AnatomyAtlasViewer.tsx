@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Heart, Brain, Bone, Activity, Sparkles, ShieldCheck } from 'lucide-react';
+import { Heart, Brain, Bone, Activity, Sparkles, ShieldCheck, Layers, Eye } from 'lucide-react';
 
 interface AtlasModel {
   id: string;
@@ -30,6 +30,14 @@ const ATLAS_MODELS: AtlasModel[] = [
     structures: ['Cerebral Cortex', 'Corpus Callosum', 'Cerebellum', 'Brainstem']
   },
   {
+    id: 'liver',
+    name: 'Human Liver & Gallbladder (UBC Anatomy)',
+    category: 'Abdominal / Hepatobiliary',
+    embedUrl: 'https://sketchfab.com/models/cfa337c34c11416ea003fd5135b1e880/embed?autostart=1&ui_controls=1&ui_infos=0&ui_watermark=0',
+    description: 'Anatomically accurate human liver with Couinaud segments, gallbladder, portal vein, hepatic artery, and biliary duct tree.',
+    structures: ['Right & Left Hepatic Lobes', 'Gallbladder', 'Portal Triad', 'Inferior Vena Cava']
+  },
+  {
     id: 'spine',
     name: 'Vertebral Column & Intervertebral Discs',
     category: 'Spine & Orthopedics',
@@ -44,6 +52,14 @@ const ATLAS_MODELS: AtlasModel[] = [
     embedUrl: 'https://sketchfab.com/models/136bfe25a2f44435b4319ab2788f701f/embed?autostart=1&ui_controls=1&ui_infos=0&ui_watermark=0',
     description: 'Anatomically accurate cranial calvarium, facial bones, orbit, maxilla, mandible, and articulated thoracic cage skeleton.',
     structures: ['Cranial Calvarium', 'Orbital Cavity', 'Mandible', 'Thoracic Cage']
+  },
+  {
+    id: 'lungs',
+    name: 'Thoracic Heart & Respiratory Lungs Enbloc',
+    category: 'Pulmonary / Thoracic',
+    embedUrl: 'https://sketchfab.com/models/2b8f0656cff846eab3574789df440c33/embed?autostart=1&ui_controls=1&ui_infos=0&ui_watermark=0',
+    description: 'Enbloc thoracic visceral anatomy featuring bronchial tree branching, pulmonary lobes, pulmonary vasculature, and cardiac relations.',
+    structures: ['Right & Left Lungs', 'Tracheobronchial Tree', 'Pulmonary Arteries', 'Mediastinum']
   }
 ];
 
@@ -57,11 +73,11 @@ export const AnatomyAtlasViewer: React.FC = () => {
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-pink-400" />
           <h2 className="text-xs uppercase tracking-wider font-bold text-slate-200">
-            3D Anatomy Atlas (4K Deployed Cloud Models)
+            3D Anatomy Atlas (Ready-Made 4K Cloud Models)
           </h2>
           <span className="text-[10px] bg-pink-950/80 text-pink-300 font-mono px-2 py-0.5 rounded border border-pink-800/60 font-semibold flex items-center gap-1">
             <ShieldCheck className="w-3 h-3 text-emerald-400" />
-            100% Verified Live Models
+            100% Medical Grade Models
           </span>
         </div>
 
@@ -79,9 +95,18 @@ export const AnatomyAtlasViewer: React.FC = () => {
             >
               {model.id === 'heart' && <Heart className="w-3.5 h-3.5 text-red-400" />}
               {model.id === 'brain' && <Brain className="w-3.5 h-3.5 text-purple-400" />}
+              {model.id === 'liver' && <Layers className="w-3.5 h-3.5 text-amber-400" />}
               {model.id === 'spine' && <Activity className="w-3.5 h-3.5 text-emerald-400" />}
               {model.id === 'skull' && <Bone className="w-3.5 h-3.5 text-cyan-400" />}
-              <span>{model.name.split(' ')[0] === '3D' ? 'Human Heart' : model.name.split(' ')[0] === 'Sagittal' ? 'Head & Brain' : model.name.split(' ')[0] === 'Vertebral' ? 'Spine Column' : 'Skull & Skeleton'}</span>
+              {model.id === 'lungs' && <Eye className="w-3.5 h-3.5 text-blue-400" />}
+              <span>
+                {model.id === 'heart' && 'Heart V2.0'}
+                {model.id === 'brain' && 'Brain Sagittal'}
+                {model.id === 'liver' && 'Liver & Gallbladder'}
+                {model.id === 'spine' && 'Spine Column'}
+                {model.id === 'skull' && 'Skull & Skeleton'}
+                {model.id === 'lungs' && 'Lungs & Thorax'}
+              </span>
             </button>
           ))}
         </div>

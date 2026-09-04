@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { PRESET_CASES } from '../data/presetCases';
+import { PatientCase, Point3D, SurgicalTelemetry } from '../types';
 import { Navbar } from '../components/Navbar';
 import { ThreeDScene } from '../components/ThreeDScene';
 import { AnatomyAtlasViewer } from '../components/AnatomyAtlasViewer';
@@ -12,33 +14,29 @@ import { OrganVisibilityPanel } from '../components/OrganVisibilityPanel';
 import { RegistrationModal } from '../components/RegistrationModal';
 import { PlanExportModal } from '../components/PlanExportModal';
 import { CustomScanUploadModal } from '../components/CustomScanUploadModal';
-import { PRESET_CASES } from '../data/presetCases';
-import { PatientCase, Point3D, SurgicalTelemetry } from '../types';
-import { computeTelemetry } from '../lib/math/navigation';
-import { Crosshair, Layers, Sparkles, Box, ShieldCheck, FileDown, GitCommit, Orbit } from 'lucide-react';
+import { Orbit, Sparkles, Layers, Crosshair, Box, GitCommit, ShieldCheck, FileDown, HeartPulse } from 'lucide-react';
 
 export default function Home() {
   const [activeCase, setActiveCase] = useState<PatientCase>(PRESET_CASES[0]);
   const [activeTab, setActiveTab] = useState<'navigation' | 'mpr' | 'ai' | 'layers'>('navigation');
-  const [pointerPosition, setPointerPosition] = useState<Point3D>(activeCase.entryPosition);
-  const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
-  const [isExportPlanOpen, setIsExportPlanOpen] = useState(false);
-  const [isUploadScanOpen, setIsUploadScanOpen] = useState(false);
-  const [isDualTrajectoryActive, setIsDualTrajectoryActive] = useState(false);
-  const [mprSubView, setMprSubView] = useState<'orthogonal' | 'cmpr'>('orthogonal');
   const [viewportMode, setViewportMode] = useState<'navigation' | 'atlas'>('navigation');
+  const [mprSubView, setMprSubView] = useState<'orthogonal' | 'cmpr'>('orthogonal');
 
-  // Compute live surgical telemetry
-  const telemetry: SurgicalTelemetry = computeTelemetry(
-    pointerPosition,
-    activeCase.targetPosition,
-    activeCase.entryPosition,
-    activeCase.safetyMarginMm
-  );
+  // Interactive surgical probe position (RAS coordinates in mm)
+  const [pointerPosition, setPointerPosition] = useState<Point3D>({
+    x: PRESET_CASES[0].entryPosition.x,
+    y: PRESET_CASES[0].entryPosition.y,
+    z: PRESET_CASES[0].entryPosition.z
+  });
+
+  const [isDualTrajectoryActive, setIsDualTrajectoryActive] = useState<boolean>(false);
+  const [isRegistrationOpen, setIsRegistrationOpen] = useState<boolean>(false);
+  const [isExportPlanOpen, setIsExportPlanOpen] = useState<boolean>(false);
+  const [isUploadScanOpen, setIsUploadScanOpen] = useState<boolean>(false);
 
   const handleCaseChange = (newCase: PatientCase) => {
     setActiveCase(newCase);
-    setPointerPosition(newCase.entryPosition);
+    setPointerPosition({ ...newCase.entryPosition });
   };
 
   const handleToggleStructure = (id: string) => {
@@ -59,9 +57,51 @@ export default function Home() {
     }));
   };
 
+  // Real-Time 3D Euclidean Distance & Trajectory Vector Math
+  const dx = pointerPosition.x - activeCase.targetPosition.x;
+  const dy = pointerPosition.y - activeCase.targetPosition.y;
+  const dz = pointerPosition.z - activeCase.targetPosition.z;
+  const distanceMm = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+  // Safety Margin Status Calculation (< 5mm is Critical, < 15mm is Approaching)
+  let marginStatus: 'SAFE' | 'APPROACHING' | 'CRITICAL' = 'SAFE';
+  if (distanceMm < activeCase.safetyMarginMm) {
+    marginStatus = 'CRITICAL';
+  } else if (distanceMm < activeCase.safetyMarginMm + 10) {
+    marginStatus = 'APPROACHING';
+  }
+
+  // Trajectory Angle Calculations (Azimuth α and Elevation β)
+  const totalDepthMm = Math.sqrt(
+    Math.pow(activeCase.entryPosition.x - activeCase.targetPosition.x, 2) +
+    Math.pow(activeCase.entryPosition.y - activeCase.targetPosition.y, 2) +
+    Math.pow(activeCase.entryPosition.z - activeCase.targetPosition.z, 2)
+  );
+  const azimuthDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const elevationDeg = (Math.asin(dz / (distanceMm || 1)) * 180) / Math.PI;
+
+  const telemetry: SurgicalTelemetry = {
+    distanceMm,
+    marginStatus,
+    safetyMarginThresholdMm: activeCase.safetyMarginMm,
+    trajectory: {
+      totalDepthMm,
+      azimuthDeg,
+      elevationDeg,
+      unitVector: {
+        x: dx / (distanceMm || 1),
+        y: dy / (distanceMm || 1),
+        z: dz / (distanceMm || 1)
+      },
+      entryPoint: activeCase.entryPosition
+    },
+    pointerPosition,
+    targetPosition: activeCase.targetPosition
+  };
+
   return (
-    <div className="min-h-screen bg-[#030712] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30">
-      {/* Top Clinical Navigation Bar */}
+    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-slate-950">
+      {/* Top Main Navigation Bar */}
       <Navbar
         activeCase={activeCase}
         onCaseChange={handleCaseChange}
@@ -71,38 +111,42 @@ export default function Home() {
         onOpenUploadModal={() => setIsUploadScanOpen(true)}
       />
 
-      {/* Main Workspace Layout */}
-      <main className="flex-1 p-4 max-w-[1920px] w-full mx-auto grid grid-cols-1 xl:grid-cols-12 gap-4">
-        {/* Left Column: Interactive 3D Anatomy Scene & 4-Quadrant MPR / CMPR Viewports */}
+      {/* Main Clinical Operating Room Workspace */}
+      <main className="flex-1 max-w-[1920px] w-full mx-auto p-3 sm:p-4 md:p-6 grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6">
+        
+        {/* Left / Main Column: 3D Visualization & Multi-Planar Reconstruction */}
         <div className="xl:col-span-8 flex flex-col gap-4">
-          {/* Primary Viewport Header: Mode Switcher (Surgical 3D vs 3D Anatomy Atlas) */}
-          <div className="flex items-center justify-between bg-slate-900/80 p-2 rounded-2xl border border-slate-800">
+          
+          {/* 3D Mode Switcher Bar */}
+          <div className="glass-panel-subtle p-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-2 border border-slate-800/80">
             <div className="flex items-center gap-2">
               <Orbit className="w-4 h-4 text-cyan-400" />
-              <span className="text-xs font-bold text-slate-200">3D Display Mode:</span>
+              <span className="text-xs font-extrabold text-slate-200">3D Workspace View:</span>
             </div>
+            
             <div className="flex gap-1.5 text-xs">
               <button
                 onClick={() => setViewportMode('navigation')}
-                className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all ${
+                className={`px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all ${
                   viewportMode === 'navigation'
-                    ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-md shadow-cyan-500/20'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Crosshair className="w-3.5 h-3.5" />
                 <span>Surgical Trajectory (Three.js)</span>
               </button>
+
               <button
                 onClick={() => setViewportMode('atlas')}
-                className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all ${
+                className={`px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all ${
                   viewportMode === 'atlas'
-                    ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-md shadow-pink-600/30'
+                    ? 'bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 text-white shadow-md shadow-pink-600/30 glow-purple'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>3D Anatomy Atlas (4K Deployed)</span>
+                <Sparkles className="w-3.5 h-3.5 text-pink-300" />
+                <span>3D Anatomy Atlas (Ready-Made 4K)</span>
               </button>
             </div>
           </div>
@@ -119,15 +163,16 @@ export default function Home() {
           )}
 
           {/* Viewport Sub-Switch (Orthogonal MPR vs Curved CMPR) */}
-          <div className="flex items-center justify-between bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+          <div className="glass-panel-subtle p-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-2 border border-slate-800/80">
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-cyan-400" />
-              <span className="text-xs font-bold text-slate-200">Reconstruction Mode:</span>
+              <span className="text-xs font-extrabold text-slate-200">Reconstruction Engine:</span>
             </div>
+            
             <div className="flex gap-1 text-xs">
               <button
                 onClick={() => setMprSubView('orthogonal')}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                className={`px-3.5 py-1.5 rounded-xl font-bold transition-all ${
                   mprSubView === 'orthogonal'
                     ? 'bg-cyan-500 text-slate-950 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
@@ -135,9 +180,10 @@ export default function Home() {
               >
                 Orthogonal 3-Plane (MPR)
               </button>
+              
               <button
                 onClick={() => setMprSubView('cmpr')}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all flex items-center gap-1 ${
+                className={`px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 ${
                   mprSubView === 'cmpr'
                     ? 'bg-emerald-500 text-slate-950 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
@@ -167,35 +213,38 @@ export default function Home() {
 
         {/* Right Column: Surgical Guidance HUD, AI Segmentation, & Organ Visibility */}
         <div className="xl:col-span-4 flex flex-col gap-4">
+          
           {/* Quick Context Sub-Tabs */}
-          <div className="flex bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 text-xs font-semibold">
+          <div className="glass-panel-subtle p-1.5 rounded-2xl border border-slate-800/80 text-xs font-bold flex shadow-inner">
             <button
               onClick={() => setActiveTab('navigation')}
-              className={`flex-1 py-1.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                 activeTab === 'navigation'
-                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-md shadow-cyan-500/20'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <Crosshair className="w-3.5 h-3.5" />
               <span>Navigation</span>
             </button>
+            
             <button
               onClick={() => setActiveTab('ai')}
-              className={`flex-1 py-1.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                 activeTab === 'ai'
-                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md shadow-purple-500/30 glow-purple'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>AI (WebGPU)</span>
             </button>
+            
             <button
               onClick={() => setActiveTab('layers')}
-              className={`flex-1 py-1.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                 activeTab === 'layers'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md shadow-blue-500/20'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -229,20 +278,21 @@ export default function Home() {
           )}
 
           {/* System Safety Guarantee Summary Card */}
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3.5 text-xs text-slate-400 flex items-center justify-between">
+          <div className="glass-panel-subtle rounded-2xl p-3.5 text-xs text-slate-400 flex items-center justify-between border border-slate-800">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>Dual Solver Registration: <strong className="text-slate-200">Kabsch + Horn's (TRE &lt; 1.5mm)</strong></span>
             </div>
             <button
               onClick={() => setIsExportPlanOpen(true)}
-              className="text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1"
+              className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1"
             >
               <FileDown className="w-3.5 h-3.5" />
               <span>Summary</span>
             </button>
           </div>
         </div>
+
       </main>
 
       {/* Point-Based Landmark Registration Modal */}

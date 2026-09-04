@@ -5,26 +5,32 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { PatientCase, Point3D } from '../types';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles, RotateCcw, Grid, Eye, ShieldAlert, Maximize2 } from 'lucide-react';
 
 interface ThreeDSceneProps {
   activeCase: PatientCase;
   pointerPosition: Point3D;
-  isDualTrajectoryActive?: boolean;
+  isDualTrajectoryActive: boolean;
 }
 
 export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
   activeCase,
   pointerPosition,
-  isDualTrajectoryActive = false
+  isDualTrajectoryActive
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
-  const [modelLoading, setModelLoading] = useState<boolean>(true);
   const [modelType, setModelType] = useState<'brain' | 'skull'>('brain');
+  const [modelLoading, setModelLoading] = useState<boolean>(true);
+  const [showGrid, setShowGrid] = useState<boolean>(true);
+  const [isWireframe, setIsWireframe] = useState<boolean>(false);
 
+  // References to dynamic 3D elements
   const sceneRef = useRef<THREE.Scene | null>(null);
-  const probeRef = useRef<THREE.Group | null>(null);
-  const secondaryProbeRef = useRef<THREE.Group | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
+  const gridHelperRef = useRef<THREE.GridHelper | null>(null);
+  const probeRef = useRef<THREE.Mesh | null>(null);
+  const secondaryProbeRef = useRef<THREE.Mesh | null>(null);
   const trajectoryLineRef = useRef<THREE.Line | null>(null);
   const secondaryLineRef = useRef<THREE.Line | null>(null);
   const targetMeshRef = useRef<THREE.Mesh | null>(null);
@@ -52,10 +58,9 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     const currentMount = mountRef.current;
     if (!currentMount) return;
 
-    // 1. Scene, Camera, Renderer Setup
+    // 1. Initialize Scene, Camera & High-Performance Renderer
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    scene.background = new THREE.Color(0x020617);
 
     const camera = new THREE.PerspectiveCamera(
       45,
@@ -64,12 +69,17 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       1000
     );
     camera.position.set(0, 45, 120);
+    cameraRef.current = camera;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance'
+    });
     renderer.setSize(currentMount.clientWidth, currentMount.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.25;
     currentMount.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -77,26 +87,28 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     controls.dampingFactor = 0.05;
     controls.maxDistance = 300;
     controls.minDistance = 20;
+    controlsRef.current = controls;
 
     // 2. Realistic Studio Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.1);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0x38bdf8, 2.5);
+    const keyLight = new THREE.DirectionalLight(0x38bdf8, 2.8);
     keyLight.position.set(50, 80, 60);
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xc084fc, 1.8);
+    const fillLight = new THREE.DirectionalLight(0xc084fc, 2.0);
     fillLight.position.set(-50, -30, -50);
     scene.add(fillLight);
 
-    const rimLight = new THREE.PointLight(0x06b6d4, 3, 150);
+    const rimLight = new THREE.PointLight(0x06b6d4, 3.5, 160);
     rimLight.position.set(0, 50, -40);
     scene.add(rimLight);
 
     // 3. Coordinate Reference Grid
     const gridHelper = new THREE.GridHelper(160, 32, 0x0ea5e9, 0x1e293b);
     gridHelper.position.y = -35;
+    gridHelperRef.current = gridHelper;
     scene.add(gridHelper);
 
     // 4. Load Real Photorealistic Anatomical Model via GLTFLoader
@@ -130,14 +142,14 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh;
             mesh.material = new THREE.MeshPhysicalMaterial({
-              color: modelType === 'skull' ? 0xf8fafc : 0x60a5fa,
-              roughness: 0.35,
-              metalness: 0.1,
-              transmission: 0.45,
-              thickness: 1.2,
+              color: modelType === 'skull' ? 0xf8fafc : 0x38bdf8,
+              roughness: 0.3,
+              metalness: 0.15,
+              transmission: 0.5,
+              thickness: 1.4,
               transparent: true,
-              opacity: 0.65,
-              wireframe: false
+              opacity: 0.7,
+              wireframe: isWireframe
             });
           }
         });
@@ -155,11 +167,11 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       }
     );
 
-    // 5. Target Lesion Focal Core Mesh (Red Glowing Target)
-    const targetGeo = new THREE.SphereGeometry(4, 32, 32);
+    // 5. Target Pathology Focal Sphere (Tumor Core)
+    const targetGeo = new THREE.SphereGeometry(4.5, 32, 32);
     const targetMat = new THREE.MeshStandardMaterial({
       color: 0xef4444,
-      emissive: 0xd97706,
+      emissive: 0xdc2626,
       emissiveIntensity: 0.8,
       roughness: 0.2
     });
@@ -169,111 +181,108 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       activeCase.targetPosition.y * 0.3,
       activeCase.targetPosition.z * 0.3
     );
-    scene.add(targetMesh);
     targetMeshRef.current = targetMesh;
+    scene.add(targetMesh);
 
-    // 6. Safety Margin Wireframe Boundary (5.0 mm margin)
-    const marginGeo = new THREE.SphereGeometry(activeCase.safetyMarginMm * 1.5, 20, 20);
+    // 6. Safety Margin Transparent Boundary Sphere (5mm halo)
+    const marginGeo = new THREE.SphereGeometry(activeCase.safetyMarginMm * 1.6, 24, 24);
     const marginMat = new THREE.MeshBasicMaterial({
-      color: 0xfbbf24,
+      color: 0xf59e0b,
       wireframe: true,
       transparent: true,
-      opacity: 0.35
+      opacity: 0.45
     });
     const marginMesh = new THREE.Mesh(marginGeo, marginMat);
     marginMesh.position.copy(targetMesh.position);
-    scene.add(marginMesh);
     marginMeshRef.current = marginMesh;
+    scene.add(marginMesh);
 
-    // 7. Surgical Probe Stylus Needle (Metallic Stylus + Depth Marker Bands)
+    // 7. Tracked Surgical Probe Needle (Cone + Cylinder)
     const probeGroup = new THREE.Group();
-    
-    // Needle shaft
-    const shaftGeo = new THREE.CylinderGeometry(0.8, 0.8, 38, 16);
-    const shaftMat = new THREE.MeshStandardMaterial({
-      color: 0xe2e8f0,
+    const probeGeo = new THREE.CylinderGeometry(0.6, 0.6, 24, 16);
+    const probeMat = new THREE.MeshStandardMaterial({
+      color: 0x06b6d4,
       metalness: 0.9,
-      roughness: 0.15
+      roughness: 0.1,
+      emissive: 0x0891b2,
+      emissiveIntensity: 0.4
     });
-    const shaft = new THREE.Mesh(shaftGeo, shaftMat);
-    shaft.position.y = 19;
-    probeGroup.add(shaft);
+    const probeCylinder = new THREE.Mesh(probeGeo, probeMat);
+    probeCylinder.position.y = 12;
+    probeGroup.add(probeCylinder);
 
-    // Millimeter Depth Rings
-    for (let r = 5; r <= 35; r += 7) {
-      const ringGeo = new THREE.TorusGeometry(1.0, 0.15, 8, 24);
-      const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.rotation.x = Math.PI / 2;
-      ring.position.y = r;
-      probeGroup.add(ring);
-    }
-
-    // Laser tip
-    const tipGeo = new THREE.ConeGeometry(1.0, 4, 16);
-    const tipMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
-    const tip = new THREE.Mesh(tipGeo, tipMat);
-    tip.rotation.x = Math.PI;
-    tip.position.y = -2;
-    probeGroup.add(tip);
-
-    scene.add(probeGroup);
-    probeRef.current = probeGroup;
-
-    // 8. Secondary Trajectory Probe (for Bilateral / Dual mode)
-    const secProbeGroup = probeGroup.clone();
-    secProbeGroup.visible = false;
-    scene.add(secProbeGroup);
-    secondaryProbeRef.current = secProbeGroup;
-
-    // 9. Trajectory Laser Beams (Cyan Dashed Lines)
-    const lineMat = new THREE.LineDashedMaterial({
+    const tipGeo = new THREE.ConeGeometry(0.8, 4, 16);
+    const tipMat = new THREE.MeshStandardMaterial({
       color: 0x22d3ee,
-      dashSize: 3,
-      gapSize: 2,
+      emissive: 0x06b6d4,
+      emissiveIntensity: 0.8
+    });
+    const tipMesh = new THREE.Mesh(tipGeo, tipMat);
+    tipMesh.position.y = -2;
+    tipMesh.rotation.x = Math.PI;
+    probeGroup.add(tipMesh);
+
+    probeGroup.position.set(
+      pointerPosition.x * 0.3,
+      pointerPosition.y * 0.3,
+      pointerPosition.z * 0.3
+    );
+    probeRef.current = probeGroup as unknown as THREE.Mesh;
+    scene.add(probeGroup);
+
+    // 8. Secondary Trajectory Probe (Dual Trajectory Mode)
+    const secProbeGroup = probeGroup.clone();
+    secProbeGroup.visible = isDualTrajectoryActive;
+    secondaryProbeRef.current = secProbeGroup as unknown as THREE.Mesh;
+    scene.add(secProbeGroup);
+
+    // 9. Laser Trajectory Line
+    const lineMat = new THREE.LineDashedMaterial({
+      color: 0x38bdf8,
+      dashSize: 2,
+      gapSize: 1,
       linewidth: 2
     });
     const lineGeo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(pointerPosition.x * 0.3, pointerPosition.y * 0.3, pointerPosition.z * 0.3),
+      probeGroup.position,
       targetMesh.position
     ]);
     const trajectoryLine = new THREE.Line(lineGeo, lineMat);
     trajectoryLine.computeLineDistances();
-    scene.add(trajectoryLine);
     trajectoryLineRef.current = trajectoryLine;
+    scene.add(trajectoryLine);
 
+    // 10. Secondary Laser Trajectory Line
     const secLineMat = new THREE.LineDashedMaterial({
       color: 0xa855f7,
-      dashSize: 3,
-      gapSize: 2
+      dashSize: 2,
+      gapSize: 1,
+      linewidth: 2
     });
     const secLineGeo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(-pointerPosition.x * 0.3, pointerPosition.y * 0.3, pointerPosition.z * 0.3),
-      new THREE.Vector3(-targetMesh.position.x, targetMesh.position.y, targetMesh.position.z)
+      probeGroup.position,
+      targetMesh.position
     ]);
-    const secLine = new THREE.Line(secLineGeo, secLineMat);
-    secLine.computeLineDistances();
-    secLine.visible = false;
-    scene.add(secLine);
-    secondaryLineRef.current = secLine;
+    const secTrajectoryLine = new THREE.Line(secLineGeo, secLineMat);
+    secTrajectoryLine.visible = isDualTrajectoryActive;
+    secondaryLineRef.current = secTrajectoryLine;
+    scene.add(secTrajectoryLine);
 
-    // 10. Animation Loop
+    // Animation Loop
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
       controls.update();
 
-      // Subtle pulse on target tumor core
-      if (targetMeshRef.current) {
-        const t = performance.now() * 0.003;
-        targetMeshRef.current.scale.setScalar(1 + Math.sin(t) * 0.06);
-      }
+      // Pulsate target tumor core
+      const scale = 1 + Math.sin(Date.now() * 0.003) * 0.06;
+      targetMesh.scale.set(scale, scale, scale);
 
       renderer.render(scene, camera);
     };
     animate();
 
-    // 11. Responsive Resize
+    // Resize Handler
     const handleResize = () => {
       if (!currentMount) return;
       camera.aspect = currentMount.clientWidth / currentMount.clientHeight;
@@ -291,7 +300,14 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
         currentMount.removeChild(renderer.domElement);
       }
     };
-  }, [activeCase, modelType]);
+  }, [activeCase, modelType, isWireframe]);
+
+  // Toggle Grid
+  useEffect(() => {
+    if (gridHelperRef.current) {
+      gridHelperRef.current.visible = showGrid;
+    }
+  }, [showGrid]);
 
   // Update Dynamic Probe Coordinates & Trajectory Lines
   useEffect(() => {
@@ -334,60 +350,109 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     }
   }, [pointerPosition, isDualTrajectoryActive]);
 
+  const handleResetCamera = () => {
+    if (cameraRef.current && controlsRef.current) {
+      cameraRef.current.position.set(0, 45, 120);
+      controlsRef.current.target.set(0, 0, 0);
+      controlsRef.current.update();
+    }
+  };
+
   return (
-    <div className="relative aspect-[16/10] w-full bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+    <div className="relative aspect-[16/10] w-full glass-panel rounded-3xl overflow-hidden shadow-2xl border border-slate-800">
       <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
       {/* Model Loading Indicator */}
       {modelLoading && (
-        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center gap-2 text-cyan-400 text-xs font-bold">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Loading Photorealistic 3D Mesh (GLTF)...</span>
+        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center gap-2.5 text-cyan-400 text-xs font-bold z-20">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span>Loading High-Resolution 3D GLTF Mesh...</span>
         </div>
       )}
 
-      {/* Top HUD Badges & Model Type Switcher */}
-      <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+      {/* Top HUD Controls & Model Switcher */}
+      <div className="absolute top-3.5 left-3.5 right-3.5 flex flex-wrap items-center justify-between gap-2 pointer-events-none z-10">
         <div className="flex items-center gap-2 pointer-events-auto">
-          <div className="bg-slate-900/80 backdrop-blur-md border border-slate-700/80 px-3 py-1 rounded-xl text-xs font-semibold text-slate-200 flex items-center gap-2 shadow-lg">
+          <div className="glass-panel-subtle px-3 py-1.5 rounded-xl text-xs font-bold text-slate-200 flex items-center gap-2 shadow-lg border border-slate-700/60">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Interactive 3D Anatomical Scene</span>
+            <span>3D Surgical Workspace</span>
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-900/90 border border-slate-800 p-1 rounded-xl text-[10px] font-bold">
+          <div className="flex items-center gap-1 glass-panel-subtle p-1 rounded-xl text-[11px] font-bold border border-slate-800">
             <button
               onClick={() => setModelType('brain')}
-              className={`px-2 py-0.5 rounded-lg transition-all ${
-                modelType === 'brain' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              className={`px-3 py-1 rounded-lg transition-all ${
+                modelType === 'brain' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-slate-100'
               }`}
             >
-              Real Brain GLB
+              Brain Mesh
             </button>
             <button
               onClick={() => setModelType('skull')}
-              className={`px-2 py-0.5 rounded-lg transition-all ${
-                modelType === 'skull' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              className={`px-3 py-1 rounded-lg transition-all ${
+                modelType === 'skull' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-slate-100'
               }`}
             >
-              Real Skull GLB
+              Skull Mesh
             </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="bg-red-950/90 text-red-300 border border-red-800/80 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-amber-400" />
-            Target Focal Core
-          </span>
-          <span className="bg-cyan-950/90 text-cyan-300 border border-cyan-800/80 px-2 py-0.5 rounded text-[10px] font-bold">
-            Tracked Stylus Probe
-          </span>
+        {/* Camera & Scene Toolbar Actions */}
+        <div className="flex items-center gap-1.5 pointer-events-auto">
+          <button
+            onClick={() => setShowGrid(!showGrid)}
+            className={`p-2 rounded-xl text-xs font-bold transition-all border ${
+              showGrid
+                ? 'bg-cyan-950/80 border-cyan-500/60 text-cyan-300'
+                : 'glass-panel-subtle border-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+            title="Toggle Spatial Reference Grid"
+          >
+            <Grid className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            onClick={() => setIsWireframe(!isWireframe)}
+            className={`p-2 rounded-xl text-xs font-bold transition-all border ${
+              isWireframe
+                ? 'bg-purple-950/80 border-purple-500/60 text-purple-300'
+                : 'glass-panel-subtle border-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+            title="Toggle Mesh Wireframe Mode"
+          >
+            <Eye className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            onClick={handleResetCamera}
+            className="p-2 rounded-xl glass-panel-subtle border-slate-800 text-slate-300 hover:text-white transition-all"
+            title="Reset Camera Orientation"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
-      {/* Bottom Orbit Navigation Instructions */}
-      <div className="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur-md border border-slate-800 px-3 py-1 rounded-lg text-[10px] text-slate-400">
-        Left-drag: 360° Orbit | Right-drag: Pan | Scroll: Zoom | Click Model Switcher to toggle Brain/Skull
+      {/* Bottom Corner Interaction Guide */}
+      <div className="absolute bottom-3 left-3 text-[10px] text-slate-400 font-mono glass-panel-subtle px-3 py-1.5 rounded-xl border border-slate-800/80 pointer-events-none flex items-center gap-3">
+        <span>🖱️ Left-drag: 360° Orbit</span>
+        <span>•</span>
+        <span>Right-drag: Pan</span>
+        <span>•</span>
+        <span>Scroll: Zoom</span>
+      </div>
+
+      {/* Bottom Right Legend */}
+      <div className="absolute bottom-3 right-3 flex items-center gap-2 pointer-events-none">
+        <div className="glass-panel-subtle px-2.5 py-1 rounded-lg border border-red-500/40 text-[10px] text-red-400 font-bold flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+          <span>Tumor Core Target</span>
+        </div>
+        <div className="glass-panel-subtle px-2.5 py-1 rounded-lg border border-amber-500/40 text-[10px] text-amber-400 font-bold flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-amber-400" />
+          <span>{activeCase.safetyMarginMm}mm Margin Halo</span>
+        </div>
       </div>
     </div>
   );
