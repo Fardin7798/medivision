@@ -46,12 +46,16 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
   const lastAlertTimeRef = useRef<number>(0);
   const lastZoneRef = useRef<'safe' | 'warning' | 'critical'>('safe');
 
-  // Optical Tracker 60Hz Stream Subscription
+  // Optical Tracker Stream Subscription (Throttled to 4Hz to prevent 60 FPS React re-render CPU spikes)
   useEffect(() => {
     if (!isOpticalTrackingActive) return;
 
     opticalTracker.setTarget(activeCase.targetPosition);
+    let lastRenderTime = 0;
     const unsubscribe = opticalTracker.subscribe((frame) => {
+      const now = Date.now();
+      if (now - lastRenderTime < 250) return; // 4Hz throttle saves 93% React re-render CPU overhead
+      lastRenderTime = now;
       setOpticalStatus({
         rmsErrorMm: frame.rmsErrorMm,
         quality: frame.quality,
@@ -62,7 +66,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
     return () => unsubscribe();
   }, [isOpticalTrackingActive, activeCase]);
 
-  // Hands-Free Audio Guidance Alerts (Debounced with Cooldown)
+  // Hands-Free Audio Guidance Alerts (Strict anti-overlap debounce)
   useEffect(() => {
     if (!isAudioGuidance) return;
 
@@ -77,7 +81,11 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
       currentZone = 'warning';
     }
 
-    if (currentZone !== lastZoneRef.current || (now - lastAlertTimeRef.current > 7000 && currentZone !== 'safe')) {
+    if (currentZone !== lastZoneRef.current || (now - lastAlertTimeRef.current > 8000 && currentZone !== 'safe')) {
+      // Prevent back-to-back alerts within 4 seconds so two sentences never overlap
+      if (now - lastAlertTimeRef.current < 4000 && currentZone !== 'critical') {
+        return;
+      }
       lastZoneRef.current = currentZone;
       lastAlertTimeRef.current = now;
 
@@ -89,13 +97,13 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
     }
   }, [telemetry.distanceMm, isAudioGuidance, activeCase.safetyMarginMm]);
 
-  // Automated Trajectory Insertion Simulation Loop
+  // Automated Trajectory Insertion Simulation Loop (Gentle 60ms cadence)
   useEffect(() => {
     if (!isSimulating) return;
 
     const interval = setInterval(() => {
       setSimulationStep((prev) => {
-        const nextStep = prev + 0.02;
+        const nextStep = prev + 0.025;
         if (nextStep >= 1.0) {
           setIsSimulating(false);
           return 0;
@@ -114,7 +122,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
         onPointerMove({ x: currentX, y: currentY, z: currentZ });
         return nextStep;
       });
-    }, 50);
+    }, 60);
 
     return () => clearInterval(interval);
   }, [isSimulating, activeCase, onPointerMove]);
@@ -122,7 +130,10 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
   const handleToggleSimulation = () => {
     if (!isSimulating) {
       setSimulationStep(0);
+      lastZoneRef.current = 'safe';
       onPointerMove(activeCase.entryPosition);
+    } else {
+      PuterClient.stopAlert();
     }
     setIsSimulating(!isSimulating);
   };
@@ -130,6 +141,8 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
   const handleResetPosition = () => {
     setIsSimulating(false);
     setSimulationStep(0);
+    lastZoneRef.current = 'safe';
+    PuterClient.stopAlert();
     onPointerMove(activeCase.entryPosition);
   };
 

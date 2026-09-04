@@ -311,30 +311,79 @@ Format your response strictly as:
     }
   },
 
+  // Active audio element reference to prevent double voice overlap
+  _activeAudio: null as HTMLAudioElement | null,
+
+  /**
+   * Stop any currently active speech playback (both Puter TTS & Browser SpeechSynthesis)
+   */
+  stopAlert(): void {
+    if (this._activeAudio) {
+      try {
+        this._activeAudio.pause();
+        this._activeAudio.currentTime = 0;
+      } catch {
+        // ignore
+      }
+      this._activeAudio = null;
+    }
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        // ignore
+      }
+    }
+  },
+
   /**
    * Speak clinical navigation warnings using Puter Text-to-Speech
+   * Strictly prevents overlapping voices by immediately cancelling previous audio
    */
   async speakAlert(text: string): Promise<void> {
-    if (!this.isAvailable()) return;
+    // 1. Immediately silence any previous ongoing voice or browser speech
+    this.stopAlert();
 
-    try {
-      if (typeof puter.ai?.txt2speech === 'function') {
-        const audio = await puter.ai.txt2speech(text);
-        if (audio && typeof audio.play === 'function') {
-          audio.play();
-          return;
+    if (!text || text.trim() === '') return;
+
+    // 2. Try Puter Cloud AI Text-to-Speech first (with strict 2.5s network timeout)
+    if (this.isAvailable() && typeof puter.ai?.txt2speech === 'function') {
+      try {
+        let isTimedOut = false;
+        const timeoutPromise = new Promise((resolve) => {
+          setTimeout(() => {
+            isTimedOut = true;
+            resolve(null);
+          }, 2500);
+        });
+
+        const fetchPromise = puter.ai.txt2speech(text).catch(() => null);
+        const audio = (await Promise.race([fetchPromise, timeoutPromise])) as HTMLAudioElement | null;
+
+        if (audio && !isTimedOut && typeof audio.play === 'function') {
+          this._activeAudio = audio;
+          audio.onended = () => {
+            this._activeAudio = null;
+          };
+          await audio.play();
+          return; // AI voice is playing cleanly; NEVER fall through to browser speech!
         }
+      } catch (err) {
+        console.warn('Puter TTS failed, falling back to browser SpeechSynthesis:', err);
       }
-    } catch (err) {
-      console.warn('Puter TTS failed, falling back to browser SpeechSynthesis:', err);
     }
 
+    // 3. Fallback to Browser SpeechSynthesis ONLY IF Puter TTS failed or timed out
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.05;
-      utterance.pitch = 1.0;
-      window.speechSynthesis.speak(utterance);
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.05;
+        utterance.pitch = 1.0;
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.warn('SpeechSynthesis failed:', err);
+      }
     }
   },
 };
