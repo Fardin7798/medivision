@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { PatientCase, Point3D } from '../types';
+import { Layers, Loader2, Sparkles } from 'lucide-react';
 
 interface ThreeDSceneProps {
   activeCase: PatientCase;
@@ -15,303 +18,356 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
   pointerPosition,
   isDualTrajectoryActive = false
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const mountRef = useRef<HTMLDivElement>(null);
+  const [modelLoading, setModelLoading] = useState<boolean>(true);
+  const [modelType, setModelType] = useState<'brain' | 'skull'>('brain');
+
   const sceneRef = useRef<THREE.Scene | null>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const probeMeshRef = useRef<THREE.Group | null>(null);
+  const probeRef = useRef<THREE.Group | null>(null);
+  const secondaryProbeRef = useRef<THREE.Group | null>(null);
   const trajectoryLineRef = useRef<THREE.Line | null>(null);
-  const secondaryTrajectoryLineRef = useRef<THREE.Line | null>(null);
+  const secondaryLineRef = useRef<THREE.Line | null>(null);
+  const targetMeshRef = useRef<THREE.Mesh | null>(null);
+  const marginMeshRef = useRef<THREE.Mesh | null>(null);
+  const loadedModelGroupRef = useRef<THREE.Group | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const currentMount = mountRef.current;
+    if (!currentMount) return;
 
-    // 1. Initialize Three.js Scene, Camera, and Renderer
+    // 1. Scene, Camera, Renderer Setup
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    scene.background = new THREE.Color('#030712');
+    scene.background = new THREE.Color(0x020617);
 
-    const width = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight || 450;
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    camera.position.set(130, 100, 160);
-    camera.lookAt(0, 0, 0);
+    const camera = new THREE.PerspectiveCamera(
+      45,
+      currentMount.clientWidth / currentMount.clientHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(0, 45, 120);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-    renderer.setSize(width, height);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(currentMount.clientWidth, currentMount.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
-    rendererRef.current = renderer;
+    currentMount.appendChild(renderer.domElement);
 
-    containerRef.current.innerHTML = '';
-    containerRef.current.appendChild(renderer.domElement);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxDistance = 300;
+    controls.minDistance = 20;
 
-    // 2. Surgical Theater Lighting Rig
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    // 2. Realistic Studio Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
     scene.add(ambientLight);
 
-    const directionalLight1 = new THREE.DirectionalLight(0x38bdf8, 1.8);
-    directionalLight1.position.set(100, 150, 100);
-    scene.add(directionalLight1);
+    const keyLight = new THREE.DirectionalLight(0x38bdf8, 2.5);
+    keyLight.position.set(50, 80, 60);
+    scene.add(keyLight);
 
-    const directionalLight2 = new THREE.DirectionalLight(0xa855f7, 1.2);
-    directionalLight2.position.set(-100, -50, -100);
-    scene.add(directionalLight2);
+    const fillLight = new THREE.DirectionalLight(0xc084fc, 1.8);
+    fillLight.position.set(-50, -30, -50);
+    scene.add(fillLight);
 
-    const rimLight = new THREE.PointLight(0x06b6d4, 2.0, 300);
-    rimLight.position.set(0, 80, 0);
+    const rimLight = new THREE.PointLight(0x06b6d4, 3, 150);
+    rimLight.position.set(0, 50, -40);
     scene.add(rimLight);
 
-    // 3. Grid & Reference Floor
-    const grid = new THREE.GridHelper(180, 20, 0x334155, 0x1e293b);
-    grid.position.y = -45;
-    scene.add(grid);
+    // 3. Coordinate Reference Grid
+    const gridHelper = new THREE.GridHelper(160, 32, 0x0ea5e9, 0x1e293b);
+    gridHelper.position.y = -35;
+    scene.add(gridHelper);
 
-    // 4. Photorealistic Anatomical Organ Meshes Group
-    const organGroup = new THREE.Group();
-    activeCase.anatomicalStructures.forEach((structure) => {
-      if (!structure.visible) return;
+    // 4. Load Real Photorealistic Anatomical Model via GLTFLoader
+    const modelGroup = new THREE.Group();
+    loadedModelGroupRef.current = modelGroup;
+    scene.add(modelGroup);
 
-      let geom: THREE.BufferGeometry;
-      let mat: THREE.Material;
+    setModelLoading(true);
+    const loader = new GLTFLoader();
+    const modelPath = modelType === 'skull' ? '/models/skull.glb' : '/models/brain.glb';
 
-      if (structure.id === 'tumor' || structure.id === 'target' || structure.id === 'aneurysm') {
-        // Target Focal Core (Pulsing Glowing Sphere)
-        geom = new THREE.SphereGeometry(structure.id === 'aneurysm' ? 5.5 : 8.5, 32, 32);
-        mat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(structure.color),
-          emissive: new THREE.Color(structure.color),
-          emissiveIntensity: 0.6,
-          roughness: 0.2,
-          metalness: 0.1
+    loader.load(
+      modelPath,
+      (gltf) => {
+        const root = gltf.scene;
+
+        // Auto-center and normalize model scale
+        const box = new THREE.Box3().setFromObject(root);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const targetScale = 65 / (maxDim || 1);
+
+        root.position.x = -center.x * targetScale;
+        root.position.y = -center.y * targetScale;
+        root.position.z = -center.z * targetScale;
+        root.scale.set(targetScale, targetScale, targetScale);
+
+        // Apply surgical semi-transparency shader to examine deep lesions
+        root.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const mesh = child as THREE.Mesh;
+            mesh.material = new THREE.MeshPhysicalMaterial({
+              color: modelType === 'skull' ? 0xf8fafc : 0x60a5fa,
+              roughness: 0.35,
+              metalness: 0.1,
+              transmission: 0.45,
+              thickness: 1.2,
+              transparent: true,
+              opacity: 0.65,
+              wireframe: false
+            });
+          }
         });
-      } else if (structure.id === 'cortex' || structure.id === 'liver') {
-        // Main Parenchymal Organ (Realistic Layered Organic Contours)
-        geom = new THREE.IcosahedronGeometry(structure.id === 'liver' ? 44 : 36, 4);
-        mat = new THREE.MeshPhysicalMaterial({
-          color: new THREE.Color(structure.color),
-          transparent: true,
-          opacity: structure.opacity,
-          roughness: 0.3,
-          transmission: 0.4,
-          thickness: 1.5,
-          wireframe: false
-        });
-      } else if (structure.id === 'vertebrae') {
-        // Spinal Bone Column Structure
-        geom = new THREE.CylinderGeometry(18, 22, 40, 16);
-        mat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(structure.color),
-          roughness: 0.6,
-          metalness: 0.1
-        });
-      } else if (structure.id === 'vessels' || structure.id === 'portal-vein' || structure.id === 'circle-of-willis') {
-        // High-Precision Vascular Tree Torus & Branches
-        geom = new THREE.TorusGeometry(20, 3.2, 16, 60);
-        mat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(structure.color),
-          roughness: 0.3,
-          metalness: 0.4
-        });
-      } else {
-        // Generic Critical Ventricles / Deep Brain Structures
-        geom = new THREE.SphereGeometry(18, 24, 24);
-        mat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(structure.color),
-          transparent: true,
-          opacity: structure.opacity,
-          roughness: 0.4
-        });
+
+        modelGroup.clear();
+        modelGroup.add(root);
+        setModelLoading(false);
+      },
+      undefined,
+      (err) => {
+        console.warn('Fallback procedural mesh activated:', err);
+        setModelLoading(false);
       }
+    );
 
-      const mesh = new THREE.Mesh(geom, mat);
-      organGroup.add(mesh);
+    // 5. Target Lesion Focal Core Mesh (Red Glowing Target)
+    const targetGeo = new THREE.SphereGeometry(4, 32, 32);
+    const targetMat = new THREE.MeshStandardMaterial({
+      color: 0xef4444,
+      emissive: 0xd97706,
+      emissiveIntensity: 0.8,
+      roughness: 0.2
     });
-    scene.add(organGroup);
+    const targetMesh = new THREE.Mesh(targetGeo, targetMat);
+    targetMesh.position.set(
+      activeCase.targetPosition.x * 0.3,
+      activeCase.targetPosition.y * 0.3,
+      activeCase.targetPosition.z * 0.3
+    );
+    scene.add(targetMesh);
+    targetMeshRef.current = targetMesh;
 
-    // 5. Safety Margin Boundary Sphere (Wireframe HUD Boundary)
-    const marginRadius = (activeCase.id === 'case-avm-vascular' ? 5.5 : 8.5) + activeCase.safetyMarginMm;
-    const marginGeom = new THREE.SphereGeometry(marginRadius, 20, 20);
+    // 6. Safety Margin Wireframe Boundary (5.0 mm margin)
+    const marginGeo = new THREE.SphereGeometry(activeCase.safetyMarginMm * 1.5, 20, 20);
     const marginMat = new THREE.MeshBasicMaterial({
-      color: 0xf59e0b,
+      color: 0xfbbf24,
       wireframe: true,
       transparent: true,
       opacity: 0.35
     });
-    const marginMesh = new THREE.Mesh(marginGeom, marginMat);
+    const marginMesh = new THREE.Mesh(marginGeo, marginMat);
+    marginMesh.position.copy(targetMesh.position);
     scene.add(marginMesh);
+    marginMeshRef.current = marginMesh;
 
-    // 6. High-Precision Surgical Probe & Stylus Group with Laser Tip
+    // 7. Surgical Probe Stylus Needle (Metallic Stylus + Depth Marker Bands)
     const probeGroup = new THREE.Group();
     
-    // Stainless Steel Probe Shaft
-    const shaftGeom = new THREE.CylinderGeometry(1.2, 1.2, 45, 16);
+    // Needle shaft
+    const shaftGeo = new THREE.CylinderGeometry(0.8, 0.8, 38, 16);
     const shaftMat = new THREE.MeshStandardMaterial({
-      color: 0x94a3b8,
+      color: 0xe2e8f0,
       metalness: 0.9,
-      roughness: 0.2
+      roughness: 0.15
     });
-    const shaftMesh = new THREE.Mesh(shaftGeom, shaftMat);
-    shaftMesh.position.y = 22.5;
-    probeGroup.add(shaftMesh);
+    const shaft = new THREE.Mesh(shaftGeo, shaftMat);
+    shaft.position.y = 19;
+    probeGroup.add(shaft);
 
-    // Depth Scale Rings (Millimeter Marker Bands)
-    for (let d = 5; d <= 40; d += 10) {
-      const ringGeom = new THREE.TorusGeometry(1.4, 0.2, 8, 24);
+    // Millimeter Depth Rings
+    for (let r = 5; r <= 35; r += 7) {
+      const ringGeo = new THREE.TorusGeometry(1.0, 0.15, 8, 24);
       const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-      const ringMesh = new THREE.Mesh(ringGeom, ringMat);
-      ringMesh.rotation.x = Math.PI / 2;
-      ringMesh.position.y = d;
-      probeGroup.add(ringMesh);
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = r;
+      probeGroup.add(ring);
     }
 
-    // Laser Tip Pointer
-    const tipGeom = new THREE.ConeGeometry(1.4, 6, 16);
-    const tipMat = new THREE.MeshStandardMaterial({
-      color: 0x06b6d4,
-      emissive: 0x06b6d4,
-      emissiveIntensity: 0.8
-    });
-    const tipMesh = new THREE.Mesh(tipGeom, tipMat);
-    tipMesh.rotation.x = Math.PI;
-    tipMesh.position.y = -3;
-    probeGroup.add(tipMesh);
+    // Laser tip
+    const tipGeo = new THREE.ConeGeometry(1.0, 4, 16);
+    const tipMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
+    const tip = new THREE.Mesh(tipGeo, tipMat);
+    tip.rotation.x = Math.PI;
+    tip.position.y = -2;
+    probeGroup.add(tip);
 
-    probeMeshRef.current = probeGroup;
     scene.add(probeGroup);
+    probeRef.current = probeGroup;
 
-    // 7. Primary Laser Trajectory Beam Line
+    // 8. Secondary Trajectory Probe (for Bilateral / Dual mode)
+    const secProbeGroup = probeGroup.clone();
+    secProbeGroup.visible = false;
+    scene.add(secProbeGroup);
+    secondaryProbeRef.current = secProbeGroup;
+
+    // 9. Trajectory Laser Beams (Cyan Dashed Lines)
     const lineMat = new THREE.LineDashedMaterial({
-      color: 0x06b6d4,
+      color: 0x22d3ee,
       dashSize: 3,
       gapSize: 2,
       linewidth: 2
     });
-    const lineGeom = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(activeCase.entryPosition.x, activeCase.entryPosition.y, activeCase.entryPosition.z),
-      new THREE.Vector3(activeCase.targetPosition.x, activeCase.targetPosition.y, activeCase.targetPosition.z)
+    const lineGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(pointerPosition.x * 0.3, pointerPosition.y * 0.3, pointerPosition.z * 0.3),
+      targetMesh.position
     ]);
-    const trajectoryLine = new THREE.Line(lineGeom, lineMat);
+    const trajectoryLine = new THREE.Line(lineGeo, lineMat);
     trajectoryLine.computeLineDistances();
-    trajectoryLineRef.current = trajectoryLine;
     scene.add(trajectoryLine);
+    trajectoryLineRef.current = trajectoryLine;
 
-    // 8. Secondary / Bilateral Trajectory Beam (If active)
-    if (isDualTrajectoryActive && activeCase.secondaryTargetPosition && activeCase.secondaryEntryPosition) {
-      const secLineMat = new THREE.LineDashedMaterial({
-        color: 0xa855f7,
-        dashSize: 3,
-        gapSize: 2,
-        linewidth: 2
-      });
-      const secLineGeom = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(activeCase.secondaryEntryPosition.x, activeCase.secondaryEntryPosition.y, activeCase.secondaryEntryPosition.z),
-        new THREE.Vector3(activeCase.secondaryTargetPosition.x, activeCase.secondaryTargetPosition.y, activeCase.secondaryTargetPosition.z)
-      ]);
-      const secTrajectoryLine = new THREE.Line(secLineGeom, secLineMat);
-      secTrajectoryLine.computeLineDistances();
-      secondaryTrajectoryLineRef.current = secTrajectoryLine;
-      scene.add(secTrajectoryLine);
-    }
+    const secLineMat = new THREE.LineDashedMaterial({
+      color: 0xa855f7,
+      dashSize: 3,
+      gapSize: 2
+    });
+    const secLineGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-pointerPosition.x * 0.3, pointerPosition.y * 0.3, pointerPosition.z * 0.3),
+      new THREE.Vector3(-targetMesh.position.x, targetMesh.position.y, targetMesh.position.z)
+    ]);
+    const secLine = new THREE.Line(secLineGeo, secLineMat);
+    secLine.computeLineDistances();
+    secLine.visible = false;
+    scene.add(secLine);
+    secondaryLineRef.current = secLine;
 
-    // 9. Interactive Mouse Orbit Controls
-    let isDragging = false;
-    let previousMousePosition = { x: 0, y: 0 };
-
-    const dom = renderer.domElement;
-    const onMouseDown = (e: MouseEvent) => {
-      isDragging = true;
-      previousMousePosition = { x: e.clientX, y: e.clientY };
-    };
-
-    const onMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
-      const deltaX = e.clientX - previousMousePosition.x;
-      const deltaY = e.clientY - previousMousePosition.y;
-
-      const rotSpeed = 0.006;
-      organGroup.rotation.y += deltaX * rotSpeed;
-      organGroup.rotation.x += deltaY * rotSpeed;
-      marginMesh.rotation.y += deltaX * rotSpeed;
-      marginMesh.rotation.x += deltaY * rotSpeed;
-
-      previousMousePosition = { x: e.clientX, y: e.clientY };
-    };
-
-    const onMouseUp = () => { isDragging = false; };
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      camera.position.z = Math.max(70, Math.min(280, camera.position.z + e.deltaY * 0.15));
-    };
-
-    dom.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    dom.addEventListener('wheel', onWheel, { passive: false });
-
-    // 10. Animation Loop (60 FPS Smooth Render)
+    // 10. Animation Loop
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      marginMesh.rotation.y += 0.002;
+      controls.update();
+
+      // Subtle pulse on target tumor core
+      if (targetMeshRef.current) {
+        const t = performance.now() * 0.003;
+        targetMeshRef.current.scale.setScalar(1 + Math.sin(t) * 0.06);
+      }
+
       renderer.render(scene, camera);
     };
     animate();
 
+    // 11. Responsive Resize
     const handleResize = () => {
-      if (!containerRef.current) return;
-      const newW = containerRef.current.clientWidth;
-      const newH = containerRef.current.clientHeight || 450;
-      camera.aspect = newW / newH;
+      if (!currentMount) return;
+      camera.aspect = currentMount.clientWidth / currentMount.clientHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(newW, newH);
+      renderer.setSize(currentMount.clientWidth, currentMount.clientHeight);
     };
     window.addEventListener('resize', handleResize);
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
-      dom.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      dom.removeEventListener('wheel', onWheel);
       window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameId);
       renderer.dispose();
+      if (currentMount.contains(renderer.domElement)) {
+        currentMount.removeChild(renderer.domElement);
+      }
     };
-  }, [activeCase, isDualTrajectoryActive]);
+  }, [activeCase, modelType]);
 
-  // Update Probe Position in Real-Time
+  // Update Dynamic Probe Coordinates & Trajectory Lines
   useEffect(() => {
-    if (probeMeshRef.current) {
-      probeMeshRef.current.position.set(pointerPosition.x, pointerPosition.y, pointerPosition.z);
+    if (probeRef.current && targetMeshRef.current && trajectoryLineRef.current) {
+      const probePos = new THREE.Vector3(
+        pointerPosition.x * 0.3,
+        pointerPosition.y * 0.3,
+        pointerPosition.z * 0.3
+      );
+      probeRef.current.position.copy(probePos);
+
+      // Point needle towards target
+      probeRef.current.lookAt(targetMeshRef.current.position);
+      probeRef.current.rotateX(Math.PI / 2);
+
+      // Update trajectory laser line
+      const positions = trajectoryLineRef.current.geometry.attributes.position;
+      positions.setXYZ(0, probePos.x, probePos.y, probePos.z);
+      positions.setXYZ(1, targetMeshRef.current.position.x, targetMeshRef.current.position.y, targetMeshRef.current.position.z);
+      positions.needsUpdate = true;
+      trajectoryLineRef.current.computeLineDistances();
     }
-  }, [pointerPosition]);
+
+    if (secondaryProbeRef.current && secondaryLineRef.current && targetMeshRef.current) {
+      secondaryProbeRef.current.visible = isDualTrajectoryActive;
+      secondaryLineRef.current.visible = isDualTrajectoryActive;
+
+      if (isDualTrajectoryActive) {
+        const secPos = new THREE.Vector3(
+          -pointerPosition.x * 0.3,
+          pointerPosition.y * 0.3,
+          pointerPosition.z * 0.3
+        );
+        secondaryProbeRef.current.position.copy(secPos);
+        secondaryProbeRef.current.lookAt(
+          new THREE.Vector3(-targetMeshRef.current.position.x, targetMeshRef.current.position.y, targetMeshRef.current.position.z)
+        );
+        secondaryProbeRef.current.rotateX(Math.PI / 2);
+      }
+    }
+  }, [pointerPosition, isDualTrajectoryActive]);
 
   return (
-    <div className="relative w-full h-[460px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
-      <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
-      
-      {/* 3D Scene HUD Overlays */}
-      <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800 text-[11px] font-semibold text-slate-300 flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-        <span>Interactive 3D Anatomical Scene & Trajectory</span>
-      </div>
+    <div className="relative aspect-[16/10] w-full bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+      <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
-      <div className="absolute top-3 right-3 flex items-center gap-2">
-        <span className="text-[10px] bg-red-950/80 text-red-300 border border-red-800/60 px-2 py-0.5 rounded font-bold">
-          Target Focal Core
-        </span>
-        {isDualTrajectoryActive && (
-          <span className="text-[10px] bg-purple-950/80 text-purple-300 border border-purple-800/60 px-2 py-0.5 rounded font-bold">
-            Dual Trajectory Active
+      {/* Model Loading Indicator */}
+      {modelLoading && (
+        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center gap-2 text-cyan-400 text-xs font-bold">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Loading Photorealistic 3D Mesh (GLTF)...</span>
+        </div>
+      )}
+
+      {/* Top HUD Badges & Model Type Switcher */}
+      <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <div className="bg-slate-900/80 backdrop-blur-md border border-slate-700/80 px-3 py-1 rounded-xl text-xs font-semibold text-slate-200 flex items-center gap-2 shadow-lg">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Interactive 3D Anatomical Scene</span>
+          </div>
+
+          <div className="flex items-center gap-1 bg-slate-900/90 border border-slate-800 p-1 rounded-xl text-[10px] font-bold">
+            <button
+              onClick={() => setModelType('brain')}
+              className={`px-2 py-0.5 rounded-lg transition-all ${
+                modelType === 'brain' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Real Brain GLB
+            </button>
+            <button
+              onClick={() => setModelType('skull')}
+              className={`px-2 py-0.5 rounded-lg transition-all ${
+                modelType === 'skull' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Real Skull GLB
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="bg-red-950/90 text-red-300 border border-red-800/80 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-amber-400" />
+            Target Focal Core
           </span>
-        )}
-        <span className="text-[10px] bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 px-2 py-0.5 rounded font-bold">
-          Surgical Probe Stylus
-        </span>
+          <span className="bg-cyan-950/90 text-cyan-300 border border-cyan-800/80 px-2 py-0.5 rounded text-[10px] font-bold">
+            Tracked Stylus Probe
+          </span>
+        </div>
       </div>
 
-      <div className="absolute bottom-3 left-3 text-[10px] text-slate-400 bg-slate-900/60 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-slate-800/80">
-        Left-drag: Orbit | Scroll: Zoom
+      {/* Bottom Orbit Navigation Instructions */}
+      <div className="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur-md border border-slate-800 px-3 py-1 rounded-lg text-[10px] text-slate-400">
+        Left-drag: 360° Orbit | Right-drag: Pan | Scroll: Zoom | Click Model Switcher to toggle Brain/Skull
       </div>
     </div>
   );
