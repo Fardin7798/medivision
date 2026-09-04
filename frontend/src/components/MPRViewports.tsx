@@ -280,7 +280,7 @@ export const MPRViewports: React.FC<MPRViewportsProps> = ({
     }
   }, [activeCase, crosshairPosition, windowPreset, zoomLevel]);
 
-  // Click & drag interaction on 2D viewports
+  // Click & drag interaction with boundary safety clamping
   const handleCanvasClick = (
     e: React.MouseEvent<HTMLCanvasElement>,
     plane: 'axial' | 'coronal' | 'sagittal'
@@ -291,8 +291,11 @@ export const MPRViewports: React.FC<MPRViewportsProps> = ({
     const w = rect.width;
     const h = rect.height;
 
-    const normX = (clickX / w) * 200 - 100;
-    const normY = 100 - (clickY / h) * 200;
+    // Safety boundary clamping [-95, 95]
+    const rawX = (clickX / w) * 200 - 100;
+    const rawY = 100 - (clickY / h) * 200;
+    const normX = Math.max(-95, Math.min(95, rawX));
+    const normY = Math.max(-95, Math.min(95, rawY));
 
     if (plane === 'axial') {
       onCrosshairMove({ ...crosshairPosition, x: normX, y: normY });

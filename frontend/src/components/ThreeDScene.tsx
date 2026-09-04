@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { PatientCase, Point3D } from '../types';
-import { Layers, Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 
 interface ThreeDSceneProps {
   activeCase: PatientCase;
@@ -31,6 +31,23 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
   const marginMeshRef = useRef<THREE.Mesh | null>(null);
   const loadedModelGroupRef = useRef<THREE.Group | null>(null);
 
+  // Helper for recursive GPU VRAM cleanup (Prevents Memory Leaks)
+  const disposeHierarchy = (obj: THREE.Object3D) => {
+    obj.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+        if (mesh.material) {
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((m) => m.dispose());
+          } else {
+            mesh.material.dispose();
+          }
+        }
+      }
+    });
+  };
+
   useEffect(() => {
     const currentMount = mountRef.current;
     if (!currentMount) return;
@@ -48,7 +65,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     );
     camera.position.set(0, 45, 120);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setSize(currentMount.clientWidth, currentMount.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -108,7 +125,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
         root.position.z = -center.z * targetScale;
         root.scale.set(targetScale, targetScale, targetScale);
 
-        // Apply surgical semi-transparency shader to examine deep lesions
+        // Normalize materials to modern Physical PBR (Prevents KHR Specular console warnings)
         root.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh;
@@ -125,13 +142,15 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
           }
         });
 
+        // Clean up previous meshes from VRAM before adding new
+        disposeHierarchy(modelGroup);
         modelGroup.clear();
         modelGroup.add(root);
         setModelLoading(false);
       },
       undefined,
       (err) => {
-        console.warn('Fallback procedural mesh activated:', err);
+        console.warn('GLTF loader note:', err);
         setModelLoading(false);
       }
     );
@@ -266,6 +285,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     return () => {
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
+      disposeHierarchy(scene);
       renderer.dispose();
       if (currentMount.contains(renderer.domElement)) {
         currentMount.removeChild(renderer.domElement);
