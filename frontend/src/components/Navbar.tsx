@@ -6,50 +6,50 @@ import { PRESET_CASES } from '@/data/presetCases';
 import {
   Activity,
   ChevronDown,
-  Shield,
   Layers,
-  Crosshair,
   Sparkles,
+  Crosshair,
   Box,
   Upload,
   CheckCircle2,
-  Stethoscope
+  Stethoscope,
+  Shield
 } from 'lucide-react';
 
 interface NavbarProps {
   activeCase: ClinicalCase;
-  onCaseChange: (newCase: ClinicalCase) => void;
-  onOpenRegistration: () => void;
-  onOpenUploadModal: () => void;
+  onCaseChange: (c: ClinicalCase) => void;
   activeTab: 'navigation' | 'mpr' | 'ai' | 'layers';
   onTabChange: (tab: 'navigation' | 'mpr' | 'ai' | 'layers') => void;
+  onOpenRegistration: () => void;
+  onOpenUploadModal: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeCase,
   onCaseChange,
-  onOpenRegistration,
-  onOpenUploadModal,
   activeTab,
   onTabChange,
+  onOpenRegistration,
+  onOpenUploadModal,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 bg-[#FEF9E1]/90 backdrop-blur-xl border-b border-[#E9EDCA] shadow-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
+    <header className="sticky top-0 z-40 bg-[#FEF9E1] border-b border-[#E9EDCA] shadow-xs">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
         
-        {/* Left: Brand & OR Suite Status */}
+        {/* Left: Brand & Clinical OR Suite Status */}
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-2xl bg-gradient-to-br from-[#D3A373] to-[#c08d5b] shadow-md shadow-[#D3A373]/25 flex items-center justify-center">
+          <div className="p-2.5 rounded-xl bg-[#D3A373] shadow-xs flex items-center justify-center">
             <Activity className="w-5 h-5 text-white stroke-[2.5]" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-black tracking-tight text-[#2e2417] text-base">
+              <span className="font-display font-extrabold tracking-tight text-[#2e2417] text-lg">
                 MediVision
               </span>
-              <span className="text-[10px] bg-[#E9EDCA] text-[#485626] font-mono px-2.5 py-0.5 rounded-full border border-[#CDD5AE] font-bold flex items-center gap-1.5 shadow-xs">
+              <span className="text-[10px] bg-[#E9EDCA] text-[#485626] font-mono px-2 py-0.5 rounded-full border border-[#CDD5AE] font-bold flex items-center gap-1.5 shadow-xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#CDD5AE] animate-pulse" />
                 OR 4K PRO
               </span>
@@ -62,13 +62,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Center: Workspace Primary Tab Navigation */}
-        <nav className="flex items-center gap-1.5 bg-[#FAEDCD] p-1.5 rounded-2xl border border-[#E9EDCA] text-xs font-semibold overflow-x-auto shadow-inner">
+        {/* Center: Workspace Primary Segmented Tab Navigation */}
+        <nav className="flex items-center gap-1 bg-[#FAEDCD] p-1 rounded-xl border border-[#E9EDCA] text-xs font-semibold overflow-x-auto shadow-xs">
           <button
             onClick={() => onTabChange('navigation')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all whitespace-nowrap font-bold ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all whitespace-nowrap font-bold ${
               activeTab === 'navigation'
-                ? 'bg-[#D3A373] text-white shadow-md shadow-[#D3A373]/30'
+                ? 'bg-[#D3A373] text-white shadow-xs font-black'
                 : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FEF9E1]'
             }`}
           >
@@ -78,9 +78,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => onTabChange('mpr')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all whitespace-nowrap font-bold ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all whitespace-nowrap font-bold ${
               activeTab === 'mpr'
-                ? 'bg-[#D3A373] text-white shadow-md shadow-[#D3A373]/30'
+                ? 'bg-[#D3A373] text-white shadow-xs font-black'
                 : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FEF9E1]'
             }`}
           >
@@ -90,21 +90,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => onTabChange('ai')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all whitespace-nowrap font-bold ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all whitespace-nowrap font-bold ${
               activeTab === 'ai'
-                ? 'bg-[#CDD5AE] text-[#334217] shadow-md shadow-[#CDD5AE]/40'
+                ? 'bg-[#CDD5AE] text-[#334217] shadow-xs font-black'
                 : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FEF9E1]'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-3.5 h-3.5 text-[#445220]" />
             <span>AI (WebGPU)</span>
           </button>
 
           <button
             onClick={() => onTabChange('layers')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all whitespace-nowrap font-bold ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all whitespace-nowrap font-bold ${
               activeTab === 'layers'
-                ? 'bg-[#D3A373] text-white shadow-md shadow-[#D3A373]/30'
+                ? 'bg-[#E9EDCA] text-[#425020] shadow-xs font-black'
                 : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FEF9E1]'
             }`}
           >
@@ -128,14 +128,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="relative">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-2.5 bg-white hover:bg-[#FAEDCD]/50 text-[#2e2417] border border-[#E9EDCA] px-3.5 py-1.5 rounded-xl text-xs transition-all shadow-xs whitespace-nowrap"
+              className="flex items-center gap-2.5 bg-white hover:bg-[#FAEDCD]/50 text-[#2e2417] border border-[#E9EDCA] px-3 py-1.5 rounded-xl text-xs transition-all shadow-xs whitespace-nowrap"
             >
               <Stethoscope className="w-3.5 h-3.5 text-[#D3A373]" />
               <div className="text-left">
                 <span className="text-[9px] text-[#7d6b56] block font-mono uppercase tracking-wider font-semibold">
                   CASE SCENARIO
                 </span>
-                <span className="font-bold text-[#2e2417] text-xs max-w-[130px] sm:max-w-[180px] truncate block">
+                <span className="font-bold text-[#2e2417] text-xs max-w-[130px] sm:max-w-[180px] truncate block font-display">
                   {activeCase.name}
                 </span>
               </div>
@@ -143,10 +143,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white/95 backdrop-blur-2xl border border-[#E9EDCA] rounded-2xl shadow-xl p-2 z-50 animate-fadeIn">
-                <div className="px-3 py-2 text-[10px] font-bold text-[#7d6b56] border-b border-[#E9EDCA] uppercase tracking-wider flex items-center justify-between">
+              <div className="absolute right-0 mt-2 w-80 bg-white border border-[#E9EDCA] rounded-2xl shadow-lg p-2 z-50 animate-fadeIn">
+                <div className="px-3 py-2 text-[10px] font-bold text-[#7d6b56] border-b border-[#E9EDCA] uppercase tracking-wider flex items-center justify-between font-mono">
                   <span>Preset Clinical Scenarios</span>
-                  <span className="text-[#D3A373] font-mono font-bold">5 Cases</span>
+                  <span className="text-[#D3A373] font-bold">5 Cases</span>
                 </div>
                 <div className="max-h-72 overflow-y-auto space-y-1 mt-1">
                   {PRESET_CASES.map((preset) => {
@@ -160,12 +160,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                         }}
                         className={`w-full text-left px-3 py-2.5 rounded-xl transition-all flex flex-col gap-1 ${
                           isSelected
-                            ? 'bg-[#FAEDCD] border border-[#D3A373] text-[#2e2417] font-medium'
+                            ? 'bg-[#FAEDCD] border border-[#D3A373] text-[#2e2417]'
                             : 'hover:bg-[#FEF9E1] text-[#5c4a38]'
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-[#2e2417] truncate max-w-[200px]">
+                          <span className="text-xs font-bold text-[#2e2417] truncate max-w-[200px] font-display">
                             {preset.name}
                           </span>
                           {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#D3A373]" />}
@@ -175,7 +175,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             {preset.modality.split('/')[0]}
                           </span>
                           <span>•</span>
-                          <span className="text-[#a46831] font-bold">Margin: {preset.safetyMarginMm}mm</span>
+                          <span className="text-[#8c5a2b] font-bold">Margin: {preset.safetyMarginMm}mm</span>
                         </div>
                       </button>
                     );

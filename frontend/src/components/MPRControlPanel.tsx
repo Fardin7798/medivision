@@ -6,13 +6,10 @@ import {
   Layers,
   Crosshair,
   GitCommit,
-  Sun,
   ShieldCheck,
   AlertTriangle,
   Target,
-  Maximize2,
-  RotateCcw,
-  Sparkles
+  RotateCcw
 } from 'lucide-react';
 
 interface MPRControlPanelProps {
@@ -32,7 +29,6 @@ export const MPRControlPanel: React.FC<MPRControlPanelProps> = ({
   onPointerMove,
   mprSubView,
   onSubViewChange,
-  onOpenExportModal,
 }) => {
   const isInsideMargin = telemetry.distanceMm <= activeCase.safetyMarginMm;
   const isAtTarget = telemetry.distanceMm < 2.0;
@@ -46,7 +42,7 @@ export const MPRControlPanel: React.FC<MPRControlPanelProps> = ({
   };
 
   return (
-    <div className="glass-panel rounded-3xl p-4 shadow-md flex flex-col gap-3.5 border border-[#E9EDCA]">
+    <div className="solid-panel rounded-3xl p-4 shadow-sm flex flex-col gap-3.5 border border-[#E9EDCA]">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#E9EDCA] pb-3">
         <div className="flex items-center gap-2">
@@ -54,7 +50,7 @@ export const MPRControlPanel: React.FC<MPRControlPanelProps> = ({
             <Layers className="w-4 h-4 text-[#D3A373]" />
           </div>
           <div>
-            <h2 className="text-xs uppercase tracking-wider font-extrabold text-[#2e2417]">
+            <h2 className="text-xs uppercase tracking-wider font-extrabold text-[#2e2417] font-display">
               MPR & CMPR Slicing Engine
             </h2>
             <p className="text-[10px] text-[#6d5d4b]">
@@ -69,12 +65,12 @@ export const MPRControlPanel: React.FC<MPRControlPanelProps> = ({
       </div>
 
       {/* Mode Switcher Banner */}
-      <div className="grid grid-cols-2 gap-2 bg-[#FAEDCD] p-1.5 rounded-2xl border border-[#E9EDCA] text-xs font-bold">
+      <div className="grid grid-cols-2 gap-2 bg-[#FAEDCD] p-1 rounded-xl border border-[#E9EDCA] text-xs font-bold">
         <button
           onClick={() => onSubViewChange('orthogonal')}
-          className={`py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+          className={`py-2 px-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
             mprSubView === 'orthogonal'
-              ? 'bg-[#D3A373] text-white shadow-md shadow-[#D3A373]/25'
+              ? 'bg-[#D3A373] text-white shadow-xs'
               : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FEF9E1]'
           }`}
         >
@@ -84,9 +80,9 @@ export const MPRControlPanel: React.FC<MPRControlPanelProps> = ({
 
         <button
           onClick={() => onSubViewChange('cmpr')}
-          className={`py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+          className={`py-2 px-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
             mprSubView === 'cmpr'
-              ? 'bg-[#CDD5AE] text-[#334217] shadow-md shadow-[#CDD5AE]/30'
+              ? 'bg-[#CDD5AE] text-[#334217] shadow-xs'
               : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FEF9E1]'
           }`}
         >
@@ -110,7 +106,7 @@ export const MPRControlPanel: React.FC<MPRControlPanelProps> = ({
             <ShieldCheck className="w-4 h-4 text-[#54682b]" />
           )}
           <div>
-            <div className="font-bold">
+            <div className="font-bold font-display">
               {isAtTarget
                 ? 'Target Coincident (0.0 mm)'
                 : isInsideMargin
@@ -133,7 +129,7 @@ export const MPRControlPanel: React.FC<MPRControlPanelProps> = ({
 
       {/* Orthogonal Slice Coordinate Navigators */}
       <div className="space-y-3 bg-white p-3.5 rounded-2xl border border-[#E9EDCA] shadow-xs">
-        <div className="flex justify-between items-center text-xs font-bold text-[#382e21]">
+        <div className="flex justify-between items-center text-xs font-bold text-[#382e21] font-display">
           <span className="flex items-center gap-1.5">
             <Crosshair className="w-3.5 h-3.5 text-[#D3A373]" />
             CROSSHAIR SLICE POSITION
@@ -210,8 +206,8 @@ export const MPRControlPanel: React.FC<MPRControlPanelProps> = ({
 
       {/* Centerline & Spline Resection Metrics (CMPR) */}
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="bg-[#FAEDCD]/50 p-3 rounded-2xl border border-[#E9EDCA] flex flex-col justify-between">
-          <span className="text-[10px] text-[#6d5d4b] font-semibold">Centerline Length</span>
+        <div className="bg-[#FAEDCD]/40 p-3 rounded-2xl border border-[#E9EDCA] flex flex-col justify-between">
+          <span className="text-[10px] text-[#6d5d4b] font-semibold font-display">Centerline Length</span>
           <div className="font-mono font-bold text-[#2e2417] text-sm mt-0.5">
             {telemetry.trajectory.totalDepthMm.toFixed(1)} <span className="text-[10px] text-[#7d6b56]">mm</span>
           </div>
@@ -220,8 +216,8 @@ export const MPRControlPanel: React.FC<MPRControlPanelProps> = ({
           </span>
         </div>
 
-        <div className="bg-[#E9EDCA]/50 p-3 rounded-2xl border border-[#CDD5AE] flex flex-col justify-between">
-          <span className="text-[10px] text-[#485724] font-semibold">Curvature Normal</span>
+        <div className="bg-[#E9EDCA]/40 p-3 rounded-2xl border border-[#CDD5AE] flex flex-col justify-between">
+          <span className="text-[10px] text-[#485724] font-semibold font-display">Curvature Normal</span>
           <div className="font-mono font-bold text-[#334217] text-sm mt-0.5">
             {(telemetry.trajectory.azimuthDeg * 0.05).toFixed(2)} rad
           </div>
@@ -231,11 +227,11 @@ export const MPRControlPanel: React.FC<MPRControlPanelProps> = ({
         </div>
       </div>
 
-      {/* Quick Quick-Action Toolbar */}
+      {/* Quick Action Toolbar */}
       <div className="flex gap-2">
         <button
           onClick={handleCenterOnEntry}
-          className="flex-1 py-2.5 px-3 rounded-2xl bg-white hover:bg-[#FAEDCD] text-[#5c4a38] text-xs font-bold border border-[#E9EDCA] shadow-xs flex items-center justify-center gap-1.5 transition-colors"
+          className="flex-1 py-2.5 px-3 rounded-xl bg-white hover:bg-[#FAEDCD] text-[#5c4a38] text-xs font-bold border border-[#E9EDCA] shadow-xs flex items-center justify-center gap-1.5 transition-colors"
         >
           <RotateCcw className="w-3.5 h-3.5 text-[#D3A373]" />
           <span>Reset to Entry</span>
@@ -243,7 +239,7 @@ export const MPRControlPanel: React.FC<MPRControlPanelProps> = ({
 
         <button
           onClick={handleCenterOnTarget}
-          className="flex-1 py-2.5 px-3 rounded-2xl bg-[#CDD5AE] hover:bg-[#bec899] text-[#2c3814] text-xs font-bold border border-[#9ba96a] shadow-xs flex items-center justify-center gap-1.5 transition-colors"
+          className="flex-1 py-2.5 px-3 rounded-xl bg-[#CDD5AE] hover:bg-[#bec899] text-[#2c3814] text-xs font-bold border border-[#9ba96a] shadow-xs flex items-center justify-center gap-1.5 transition-colors"
         >
           <Target className="w-3.5 h-3.5 text-[#445220]" />
           <span>Align to Target</span>

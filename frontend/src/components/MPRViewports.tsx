@@ -141,22 +141,15 @@ export const MPRViewports: React.FC<MPRViewportsProps> = ({
     ctx.lineTo(crossX, h);
     ctx.stroke();
     ctx.setLineDash([]);
-
-    // Crosshair intersection circle
-    ctx.beginPath();
-    ctx.arc(crossX, crossY, 4, 0, 2 * Math.PI);
-    ctx.fillStyle = ctx.strokeStyle;
-    ctx.fill();
   };
 
-  // Re-render canvases when coordinates or presets change
   useEffect(() => {
     const axialCanvas = axialCanvasRef.current;
     if (axialCanvas) {
       const w = axialCanvas.width;
       const h = axialCanvas.height;
       const crossX = ((crosshairPosition.x + 100) / 200) * w;
-      const crossY = ((100 - crosshairPosition.y) / 200) * h;
+      const crossY = ((crosshairPosition.y + 100) / 200) * h;
       drawAnatomicalSlice(axialCanvas, 'axial', crossX, crossY, crosshairPosition.z);
     }
 
@@ -206,12 +199,12 @@ export const MPRViewports: React.FC<MPRViewportsProps> = ({
   };
 
   return (
-    <div className="glass-panel rounded-3xl p-4 shadow-md flex flex-col gap-3.5 border border-[#E9EDCA]">
+    <div className="solid-panel rounded-3xl p-4 shadow-sm flex flex-col gap-3.5 border border-[#E9EDCA]">
       {/* Top Controls: Modality & Window/Level Presets */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E9EDCA] pb-3">
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-[#D3A373]" />
-          <h2 className="text-xs uppercase tracking-wider font-extrabold text-[#2e2417]">
+          <h2 className="text-xs uppercase tracking-wider font-extrabold text-[#2e2417] font-display">
             Multi-Planar Reconstruction (2D MPR)
           </h2>
           <span className="text-[10px] bg-[#E9EDCA] text-[#445220] font-mono px-2.5 py-0.5 rounded-full border border-[#CDD5AE] font-semibold">
@@ -222,7 +215,7 @@ export const MPRViewports: React.FC<MPRViewportsProps> = ({
         <div className="flex items-center gap-2 text-xs">
           <div className="flex items-center gap-1 bg-[#FAEDCD] p-1 rounded-xl border border-[#E9EDCA]">
             <Sun className="w-3.5 h-3.5 text-[#D3A373] ml-1" />
-            <span className="text-[10px] text-[#6d5d4b] font-medium">Preset:</span>
+            <span className="text-[10px] text-[#6d5d4b] font-medium font-display">Preset:</span>
             {(['BRAIN', 'BONE', 'SOFT', 'LUNG'] as const).map((preset) => (
               <button
                 key={preset}
@@ -250,7 +243,7 @@ export const MPRViewports: React.FC<MPRViewportsProps> = ({
         {/* 1. Axial (Transverse) Viewport */}
         <div className="bg-white border border-[#E9EDCA] rounded-2xl p-2.5 flex flex-col gap-2 shadow-xs hover:border-[#D3A373] transition-colors group">
           <div className="flex items-center justify-between text-xs px-1">
-            <span className="font-bold text-[#8c5a2b] flex items-center gap-1.5">
+            <span className="font-bold text-[#8c5a2b] flex items-center gap-1.5 font-display">
               <Crosshair className="w-3.5 h-3.5" /> Axial (Transverse)
             </span>
             <span className="font-mono text-[10px] text-[#2e2417] bg-[#E9EDCA] px-1.5 py-0.5 rounded border border-[#CDD5AE] font-semibold">
@@ -275,7 +268,7 @@ export const MPRViewports: React.FC<MPRViewportsProps> = ({
         {/* 2. Coronal (Frontal) Viewport */}
         <div className="bg-white border border-[#E9EDCA] rounded-2xl p-2.5 flex flex-col gap-2 shadow-xs hover:border-[#CDD5AE] transition-colors group">
           <div className="flex items-center justify-between text-xs px-1">
-            <span className="font-bold text-[#445220] flex items-center gap-1.5">
+            <span className="font-bold text-[#445220] flex items-center gap-1.5 font-display">
               <Crosshair className="w-3.5 h-3.5" /> Coronal (Frontal)
             </span>
             <span className="font-mono text-[10px] text-[#2e2417] bg-[#E9EDCA] px-1.5 py-0.5 rounded border border-[#CDD5AE] font-semibold">
@@ -300,7 +293,7 @@ export const MPRViewports: React.FC<MPRViewportsProps> = ({
         {/* 3. Sagittal (Lateral) Viewport */}
         <div className="bg-white border border-[#E9EDCA] rounded-2xl p-2.5 flex flex-col gap-2 shadow-xs hover:border-[#D3A373] transition-colors group">
           <div className="flex items-center justify-between text-xs px-1">
-            <span className="font-bold text-[#784819] flex items-center gap-1.5">
+            <span className="font-bold text-[#784819] flex items-center gap-1.5 font-display">
               <Crosshair className="w-3.5 h-3.5" /> Sagittal (Lateral)
             </span>
             <span className="font-mono text-[10px] text-[#2e2417] bg-[#E9EDCA] px-1.5 py-0.5 rounded border border-[#CDD5AE] font-semibold">

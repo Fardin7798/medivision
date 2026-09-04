@@ -1,134 +1,174 @@
 'use client';
 
-import React, { useState } from 'react';
-import { GitCommit } from 'lucide-react';
-import { PatientCase, Point3D } from '../types';
+import React, { useRef, useEffect, useState } from 'react';
+import { ClinicalCase, Vector3D } from '@/types';
+import { GitCommit, ZoomIn, Compass } from 'lucide-react';
 
 interface CMPRViewerProps {
-  activeCase: PatientCase;
-  pointerPosition: Point3D;
-  onPointerMove: (position: Point3D) => void;
+  activeCase: ClinicalCase;
+  pointerPosition: Vector3D;
+  onPointerMove: (pos: Vector3D) => void;
 }
 
 export const CMPRViewer: React.FC<CMPRViewerProps> = ({
   activeCase,
-  pointerPosition: _pointerPosition,
-  onPointerMove
+  pointerPosition,
+  onPointerMove,
 }) => {
-  const [centerlineProgress, setCenterlineProgress] = useState(0.45);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [sliceStep, setSliceStep] = useState(0.5);
 
-  // Generate Spline Waypoints between entry and target
-  const entry = activeCase.entryPosition;
-  const target = activeCase.targetPosition;
+  // High-Precision Curved Multi-Planar Reformation (CMPR) Slice Renderer
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-  // Calculate current spline interpolation point based on progress
-  const currentSplineX = entry.x + (target.x - entry.x) * centerlineProgress;
-  const currentSplineY = entry.y + (target.y - entry.y) * centerlineProgress;
-  const currentSplineZ = entry.z + (target.z - entry.z) * centerlineProgress;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  const handleCenterlineScrub = (val: number) => {
-    setCenterlineProgress(val);
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // Dark surgical background
+    ctx.fillStyle = '#161c13';
+    ctx.fillRect(0, 0, w, h);
+
+    // Anatomical tissue parenchyma along curved centerline
+    ctx.save();
+    ctx.translate(w / 2, h / 2);
+
+    // Curved Spline Anatomical Corridor
+    ctx.beginPath();
+    ctx.ellipse(0, 0, w * 0.42, h * 0.36, 0, 0, 2 * Math.PI);
+    ctx.fillStyle = '#263321';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#CDD5AE';
+    ctx.stroke();
+
+    // Internal Vasculature & Critical Structures
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.35, -h * 0.1);
+    ctx.bezierCurveTo(-w * 0.1, -h * 0.25, w * 0.1, h * 0.25, w * 0.35, h * 0.1);
+    ctx.strokeStyle = '#D3A373';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // Target Tumor Focal Center
+    const targetScreenX = (activeCase.targetPosition.x / 100) * (w * 0.35);
+    const targetScreenY = (activeCase.targetPosition.y / 100) * (h * 0.3);
+
+    ctx.beginPath();
+    ctx.arc(targetScreenX, targetScreenY, 14, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ef4444';
+    ctx.shadowColor = '#D3A373';
+    ctx.shadowBlur = 12;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Safety Margin Ring
+    ctx.beginPath();
+    ctx.arc(targetScreenX, targetScreenY, 14 + activeCase.safetyMarginMm * 2, 0, 2 * Math.PI);
+    ctx.strokeStyle = '#CDD5AE';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Live Crosshair Position
+    const crossX = (pointerPosition.x / 100) * (w * 0.35);
+    const crossY = (pointerPosition.y / 100) * (h * 0.3);
+
+    ctx.restore();
+
+    // Crosshair Laser Overlay
+    ctx.strokeStyle = '#D3A373';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+
+    const canvasCrossX = w / 2 + crossX;
+    const canvasCrossY = h / 2 + crossY;
+
+    ctx.beginPath();
+    ctx.moveTo(0, canvasCrossY);
+    ctx.lineTo(w, canvasCrossY);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(canvasCrossX, 0);
+    ctx.lineTo(canvasCrossX, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }, [activeCase, pointerPosition, sliceStep]);
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    const w = rect.width;
+    const h = rect.height;
+
+    const normX = ((clickX - w / 2) / (w * 0.35)) * 100;
+    const normY = ((clickY - h / 2) / (h * 0.3)) * 100;
+
     onPointerMove({
-      x: parseFloat(currentSplineX.toFixed(2)),
-      y: parseFloat(currentSplineY.toFixed(2)),
-      z: parseFloat(currentSplineZ.toFixed(2))
+      ...pointerPosition,
+      x: Math.max(-95, Math.min(95, normX)),
+      y: Math.max(-95, Math.min(95, normY)),
     });
   };
 
   return (
-    <div className="glass-panel border border-[#E9EDCA] rounded-3xl p-4 text-[#2e2417] shadow-md flex flex-col gap-3.5">
+    <div className="solid-panel rounded-3xl p-4 shadow-sm flex flex-col gap-3.5 border border-[#E9EDCA]">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#E9EDCA] pb-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E9EDCA] pb-3">
         <div className="flex items-center gap-2">
-          <GitCommit className="w-4 h-4 text-[#54682b]" />
-          <h3 className="text-xs uppercase font-bold tracking-wider text-[#2e2417]">
-            Curved Multi-Planar Reconstruction (CMPR)
-          </h3>
+          <GitCommit className="w-4 h-4 text-[#CDD5AE]" />
+          <h2 className="text-xs uppercase tracking-wider font-extrabold text-[#2e2417] font-display">
+            Curved Planar Reformation (CMPR)
+          </h2>
+          <span className="text-[10px] bg-[#E9EDCA] text-[#445220] font-mono px-2.5 py-0.5 rounded-full border border-[#CDD5AE] font-semibold">
+            Spline Tracked
+          </span>
         </div>
-        <span className="text-[10px] bg-[#E9EDCA] text-[#445220] px-2.5 py-0.5 rounded-full border border-[#CDD5AE] font-semibold font-mono">
-          Catmull-Rom Spline Engine
-        </span>
+
+        <div className="flex items-center gap-2 text-xs font-mono">
+          <div className="flex items-center gap-1.5 bg-[#FAEDCD] px-3 py-1 rounded-xl border border-[#E9EDCA] text-[10px] font-semibold text-[#2e2417]">
+            <Compass className="w-3.5 h-3.5 text-[#D3A373]" />
+            <span>Spline Normal: 90.0°</span>
+          </div>
+        </div>
       </div>
 
-      {/* Unrolled Longitudinal Curve Display */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* 1. Unrolled Centerline View */}
-        <div className="bg-[#FAEDCD]/60 rounded-2xl p-3 border border-[#E9EDCA] flex flex-col gap-2 shadow-xs">
-          <div className="flex justify-between items-center text-[11px]">
-            <span className="font-bold text-[#445220]">Longitudinal Centerline Unrolled</span>
-            <span className="text-[#7d6b56] font-mono text-[10px] font-semibold">{(centerlineProgress * 100).toFixed(0)}% Path</span>
-          </div>
+      {/* Main CMPR Longitudinal Reformation Canvas */}
+      <div className="relative aspect-[21/9] w-full rounded-2xl overflow-hidden border border-[#E9EDCA] bg-[#161c13] cursor-crosshair shadow-inner">
+        <canvas
+          ref={canvasRef}
+          width={800}
+          height={340}
+          onClick={handleCanvasClick}
+          className="w-full h-full object-cover"
+        />
+      </div>
 
-          <div className="relative w-full h-36 bg-[#161c13] rounded-xl overflow-hidden border border-[#E9EDCA] flex items-center justify-center shadow-inner">
-            {/* Curved Centerline Path Line */}
-            <svg className="w-full h-full" viewBox="0 0 300 120">
-              <path
-                d="M 20 60 Q 90 20, 150 60 T 280 60"
-                fill="none"
-                stroke="#CDD5AE"
-                strokeWidth="3"
-                strokeDasharray="4 2"
-              />
-              {/* Waypoint Nodes */}
-              <circle cx="20" cy="60" r="5" fill="#D3A373" />
-              <circle cx="150" cy="60" r="4" fill="#E9EDCA" />
-              <circle cx="280" cy="60" r="6" fill="#c2410c" />
-
-              {/* Active Probe Marker on Spline */}
-              <circle
-                cx={20 + centerlineProgress * 260}
-                cy={60 - Math.sin(centerlineProgress * Math.PI) * 25}
-                r="7"
-                fill="#D3A373"
-                stroke="#FEF9E1"
-                strokeWidth="2"
-              />
-            </svg>
-
-            {/* Labels */}
-            <span className="absolute bottom-1 left-2 text-[9px] text-[#D3A373] font-mono font-bold">Entry Port</span>
-            <span className="absolute bottom-1 right-2 text-[9px] text-[#c2410c] font-mono font-bold">Target Core</span>
-          </div>
-
-          {/* Centerline Scrubber */}
-          <input
-            type="range"
-            min="0"
-            max="1.0"
-            step="0.01"
-            value={centerlineProgress}
-            onChange={(e) => handleCenterlineScrub(parseFloat(e.target.value))}
-            className="w-full accent-[#D3A373] h-1.5 bg-[#E9EDCA] rounded-lg cursor-pointer"
-          />
+      {/* Centerline Resection Step Slider */}
+      <div className="flex items-center justify-between gap-3 text-xs bg-[#FAEDCD]/40 p-2.5 rounded-2xl border border-[#E9EDCA] font-mono">
+        <div className="flex items-center gap-2">
+          <ZoomIn className="w-3.5 h-3.5 text-[#D3A373]" />
+          <span className="text-[11px] font-bold text-[#5c4a38] font-display">Resection Step:</span>
         </div>
-
-        {/* 2. Cross-Sectional Orthogonal Plane at Spline Normal */}
-        <div className="bg-[#FAEDCD]/60 rounded-2xl p-3 border border-[#E9EDCA] flex flex-col gap-2 shadow-xs">
-          <div className="flex justify-between items-center text-[11px]">
-            <span className="font-bold text-[#8c5a2b]">Normal Cross-Section Slice</span>
-            <span className="text-[#7d6b56] font-mono text-[10px] font-semibold">Lumen: 6.8 mm</span>
-          </div>
-
-          <div className="relative w-full h-36 bg-[#161c13] rounded-xl overflow-hidden border border-[#E9EDCA] flex items-center justify-center shadow-inner">
-            <div className="absolute inset-0 bg-gradient-radial from-[#242e20] via-[#161c13] to-[#161c13]" />
-            
-            {/* Concentric Lumen Rings */}
-            <div className="w-20 h-20 rounded-full border-2 border-[#CDD5AE] bg-[#CDD5AE]/20 flex items-center justify-center">
-              <div className="w-10 h-10 rounded-full border border-[#D3A373] bg-[#D3A373]/30 flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-[#FEF9E1]" />
-              </div>
-            </div>
-
-            <div className="absolute top-2 left-2 text-[9px] font-mono text-[#CDD5AE] font-semibold">
-              Curved Normal Vector: [0.32, -0.68, 0.65]
-            </div>
-          </div>
-
-          <div className="flex justify-between text-[10px] text-[#6d5d4b] font-mono pt-1">
-            <span>Interpolated Pos:</span>
-            <span className="text-[#2e2417] font-bold">[{currentSplineX.toFixed(1)}, {currentSplineY.toFixed(1)}, {currentSplineZ.toFixed(1)}] mm</span>
-          </div>
-        </div>
+        <input
+          type="range"
+          min="0.1"
+          max="1.0"
+          step="0.05"
+          value={sliceStep}
+          onChange={(e) => setSliceStep(parseFloat(e.target.value))}
+          className="flex-1 cursor-pointer h-1.5 bg-[#E9EDCA] rounded-lg accent-[#D3A373]"
+        />
+        <span className="text-[11px] font-bold text-[#2e2417]">
+          {(sliceStep * 100).toFixed(0)}% Depth
+        </span>
       </div>
     </div>
   );

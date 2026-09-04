@@ -2,17 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { ClinicalCase, NavigationTelemetry, Vector3D } from '@/types';
-import { opticalTracker, OpticalTrackerFrame } from '@/lib/hardware/opticalTracker';
+import { opticalTracker } from '@/lib/hardware/opticalTracker';
 import {
   Crosshair,
-  AlertTriangle,
-  Play,
-  RotateCcw,
-  Volume2,
-  VolumeX,
   Layers,
   Radio,
-  FileDown
+  RotateCcw,
+  Play,
+  FileDown,
+  Compass
 } from 'lucide-react';
 
 interface NavigationTelemetryHUDProps {
@@ -33,80 +31,63 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
   onOpenExportModal,
 }) => {
   const [isSimulating, setIsSimulating] = useState(false);
-  const [isSoundMuted, setIsSoundMuted] = useState(false);
-  const [isOpticalTrackingActive, setIsOpticalTrackingActive] = useState(false);
-  const [opticalStatus, setOpticalStatus] = useState<{
-    isStreaming: boolean;
-    model: string;
-    baudRate: number;
-    refreshRate: string;
-    rmsErrorMm: number;
-    quality: number;
-    probePosition: Vector3D;
-  }>(opticalTracker.getStatus());
+  const [simulationStep, setSimulationStep] = useState(0);
+  const [isOpticalTrackingActive, setIsOpticalTrackingActive] = useState(true);
+  const [opticalStatus, setOpticalStatus] = useState({
+    rmsErrorMm: 0.12,
+    quality: 0.99,
+    frequencyHz: 60,
+  });
 
-  // Optical tracker hardware subscription
+  // Optical Tracker 60Hz Stream Subscription
   useEffect(() => {
     if (!isOpticalTrackingActive) return;
-    const unsub = opticalTracker.subscribe((frame: OpticalTrackerFrame) => {
-      setOpticalStatus((prev) => ({
-        ...prev,
-        isStreaming: true,
+
+    opticalTracker.setTarget(activeCase.targetPosition);
+    const unsubscribe = opticalTracker.subscribe((frame) => {
+      setOpticalStatus({
         rmsErrorMm: frame.rmsErrorMm,
         quality: frame.quality,
-        probePosition: frame.probePosition
-      }));
-      onPointerMove(frame.probePosition);
+        frequencyHz: frame.frequencyHz,
+      });
     });
-    return () => unsub();
-  }, [isOpticalTrackingActive, onPointerMove]);
 
-  // Audio Proximity Oscillator Alert (Web Audio API)
-  useEffect(() => {
-    if (isSoundMuted) return;
-    if (telemetry.marginStatus === 'BREACHED' || telemetry.marginStatus === 'APPROACHING' || telemetry.marginStatus === 'CRITICAL') {
-      try {
-        const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = (telemetry.marginStatus === 'BREACHED' || telemetry.marginStatus === 'CRITICAL') ? 'sawtooth' : 'sine';
-        osc.frequency.setValueAtTime(
-          (telemetry.marginStatus === 'BREACHED' || telemetry.marginStatus === 'CRITICAL') ? 880 : 440,
-          audioCtx.currentTime
-        );
-        gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.15);
-      } catch {
-        // AudioContext may be restricted by browser policy
-      }
-    }
-  }, [telemetry.marginStatus, isSoundMuted]);
+    return () => unsubscribe();
+  }, [isOpticalTrackingActive, activeCase]);
 
-  // Trajectory Simulation Loop
+  // Automated Trajectory Insertion Simulation Loop
   useEffect(() => {
     if (!isSimulating) return;
 
     const interval = setInterval(() => {
-      onPointerMove({
-        x: telemetry.pointerPosition.x + (activeCase.targetPosition.x - telemetry.pointerPosition.x) * 0.08,
-        y: telemetry.pointerPosition.y + (activeCase.targetPosition.y - telemetry.pointerPosition.y) * 0.08,
-        z: telemetry.pointerPosition.z + (activeCase.targetPosition.z - telemetry.pointerPosition.z) * 0.08,
-      });
+      setSimulationStep((prev) => {
+        const nextStep = prev + 0.02;
+        if (nextStep >= 1.0) {
+          setIsSimulating(false);
+          return 0;
+        }
 
-      if (telemetry.distanceMm < 1.0) {
-        setIsSimulating(false);
-      }
-    }, 100);
+        const currentX =
+          activeCase.entryPosition.x +
+          (activeCase.targetPosition.x - activeCase.entryPosition.x) * nextStep;
+        const currentY =
+          activeCase.entryPosition.y +
+          (activeCase.targetPosition.y - activeCase.entryPosition.y) * nextStep;
+        const currentZ =
+          activeCase.entryPosition.z +
+          (activeCase.targetPosition.z - activeCase.entryPosition.z) * nextStep;
+
+        onPointerMove({ x: currentX, y: currentY, z: currentZ });
+        return nextStep;
+      });
+    }, 50);
 
     return () => clearInterval(interval);
-  }, [isSimulating, telemetry.pointerPosition, activeCase.targetPosition, telemetry.distanceMm, onPointerMove]);
+  }, [isSimulating, activeCase, onPointerMove]);
 
   const handleToggleSimulation = () => {
-    if (telemetry.distanceMm < 1.0) {
+    if (!isSimulating) {
+      setSimulationStep(0);
       onPointerMove(activeCase.entryPosition);
     }
     setIsSimulating(!isSimulating);
@@ -114,77 +95,135 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
 
   const handleResetPosition = () => {
     setIsSimulating(false);
+    setSimulationStep(0);
     onPointerMove(activeCase.entryPosition);
   };
 
+  // Trajectory Angle Offset & Deviation calculation
+  const azimuthAngle = telemetry.trajectory.azimuthDeg;
+  const elevationAngle = telemetry.trajectory.elevationDeg;
+  const radarCrossX = 50 + Math.sin((azimuthAngle * Math.PI) / 180) * Math.min(38, telemetry.distanceMm * 0.6);
+  const radarCrossY = 50 - Math.cos((elevationAngle * Math.PI) / 180) * Math.min(38, telemetry.distanceMm * 0.6);
+
   return (
-    <div className="glass-panel p-4 rounded-3xl flex flex-col gap-4 border border-[#E9EDCA]">
-      
-      {/* Header with Title & Audio Mute */}
+    <div className="solid-panel rounded-3xl p-4 shadow-sm flex flex-col gap-3.5 border border-[#E9EDCA]">
+      {/* Header with Case Modality Badge */}
       <div className="flex items-center justify-between border-b border-[#E9EDCA] pb-3">
         <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#CDD5AE] animate-pulse" />
-          <h2 className="text-xs font-black tracking-wider uppercase text-[#2e2417]">
-            Real-Time Guidance HUD
-          </h2>
+          <div className="p-2 rounded-xl bg-[#FAEDCD] text-[#784819] border border-[#D3A373]/40">
+            <Compass className="w-4 h-4 text-[#D3A373]" />
+          </div>
+          <div>
+            <h2 className="text-xs uppercase tracking-wider font-extrabold text-[#2e2417] font-display">
+              Surgical Guidance Cockpit
+            </h2>
+            <p className="text-[10px] text-[#6d5d4b]">
+              Sub-millimeter Optical Trajectory HUD
+            </p>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setIsSoundMuted(!isSoundMuted)}
-            className={`p-1.5 rounded-xl border transition-colors ${
-              isSoundMuted
-                ? 'bg-[#E9EDCA] border-[#CDD5AE] text-[#7d6b56]'
-                : 'bg-[#FAEDCD] border-[#D3A373] text-[#8c5a2b]'
-            }`}
-            title={isSoundMuted ? 'Unmute alerts' : 'Mute audio alerts'}
-          >
-            {isSoundMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-          </button>
+
+        <span className="text-[10px] bg-[#E9EDCA] text-[#445220] font-mono px-2.5 py-0.5 rounded-full border border-[#CDD5AE] font-bold">
+          {activeCase.modality}
+        </span>
+      </div>
+
+      {/* 21st.dev Circular Target Radar Scope */}
+      <div className="bg-[#111827] rounded-2xl p-3 border border-[#E9EDCA] flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
+        <div className="w-full flex justify-between items-center text-[10px] font-mono text-[#94a3b8] mb-1">
+          <span className="flex items-center gap-1.5 text-[#38bdf8] font-bold">
+            <span className="w-2 h-2 rounded-full bg-[#38bdf8] animate-ping" />
+            TARGET ALIGNMENT RADAR
+          </span>
+          <span className="text-[#a3e635]">TRE: &lt;{opticalStatus.rmsErrorMm.toFixed(2)}mm</span>
+        </div>
+
+        {/* SVG Radar Scope Canvas */}
+        <div className="relative w-40 h-40 flex items-center justify-center my-1">
+          <svg className="w-full h-full" viewBox="0 0 100 100">
+            {/* Concentric Rings (5°, 10°, 15° deviation zones) */}
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#1e293b" strokeWidth="1" />
+            <circle cx="50" cy="50" r="28" fill="none" stroke="#334155" strokeWidth="1" strokeDasharray="2,2" />
+            <circle cx="50" cy="50" r="16" fill="none" stroke="#475569" strokeWidth="1" />
+            <circle cx="50" cy="50" r="5" fill="none" stroke="#0ea5e9" strokeWidth="1.5" />
+
+            {/* Radar Crosshairs */}
+            <line x1="50" y1="5" x2="50" y2="95" stroke="#334155" strokeWidth="0.75" />
+            <line x1="5" y1="50" x2="95" y2="50" stroke="#334155" strokeWidth="0.75" />
+
+            {/* Rotating Radar Sweep Beam */}
+            <line
+              x1="50"
+              y1="50"
+              x2="90"
+              y2="50"
+              stroke="rgba(56, 189, 248, 0.4)"
+              strokeWidth="2"
+              className="origin-center animate-radar-sweep"
+            />
+
+            {/* Dynamic Probe Tip Crosshair Point */}
+            <circle
+              cx={radarCrossX}
+              cy={radarCrossY}
+              r="4"
+              fill="#ef4444"
+              stroke="#ffffff"
+              strokeWidth="1.5"
+            />
+            <line
+              x1={radarCrossX - 6}
+              y1={radarCrossY}
+              x2={radarCrossX + 6}
+              y2={radarCrossY}
+              stroke="#ef4444"
+              strokeWidth="1"
+            />
+            <line
+              x1={radarCrossX}
+              y1={radarCrossY - 6}
+              x2={radarCrossX}
+              y2={radarCrossY + 6}
+              stroke="#ef4444"
+              strokeWidth="1"
+            />
+          </svg>
+        </div>
+
+        {/* Live Distance Readout underneath Radar */}
+        <div className="flex items-center justify-between w-full px-2 pt-1 border-t border-[#1e293b] text-[10px] font-mono">
+          <span className="text-[#94a3b8]">Dist to Focal Core:</span>
+          <span className={`font-bold text-xs ${
+            telemetry.distanceMm < 2.0
+              ? 'text-[#a3e635]'
+              : telemetry.distanceMm <= activeCase.safetyMarginMm
+              ? 'text-[#f59e0b]'
+              : 'text-[#38bdf8]'
+          }`}>
+            {telemetry.distanceMm.toFixed(1)} mm
+          </span>
         </div>
       </div>
 
-      {/* Primary Target Distance Readout Gauge */}
-      <div className="bg-white p-4 rounded-2xl border border-[#E9EDCA] shadow-xs flex flex-col gap-3">
-        <div className="flex justify-between items-start">
-          <div>
-            <span className="text-[10px] uppercase font-bold text-[#7d6b56] tracking-wider">
-              Distance to Focal Target
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className={`text-3xl font-black font-mono tracking-tight ${
-                telemetry.marginStatus === 'BREACHED' || telemetry.marginStatus === 'CRITICAL'
-                  ? 'text-[#c2410c] animate-pulse'
-                  : telemetry.marginStatus === 'APPROACHING'
-                  ? 'text-[#d97706]'
-                  : 'text-[#2e2417]'
-              }`}>
-                {telemetry.distanceMm.toFixed(2)}
-              </span>
-              <span className="text-xs font-bold text-[#7d6b56]">mm</span>
-            </div>
-          </div>
-
-          <div className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 border shadow-xs ${
-            telemetry.marginStatus === 'BREACHED' || telemetry.marginStatus === 'CRITICAL'
-              ? 'bg-[#fed7aa] text-[#9a3412] border-[#f97316] animate-bounce'
-              : telemetry.marginStatus === 'APPROACHING'
-              ? 'bg-[#FAEDCD] text-[#854d0e] border-[#D3A373]'
-              : 'bg-[#E9EDCA] text-[#3f4d1c] border-[#CDD5AE]'
+      {/* Primary Distance Metric & Critical Safety Margin Bar */}
+      <div className="bg-[#FAEDCD]/40 p-3.5 rounded-2xl border border-[#E9EDCA] space-y-2">
+        <div className="flex justify-between items-center">
+          <span className="text-xs font-bold text-[#5c4a38] font-display">Target Corridor Distance</span>
+          <span className={`text-xs px-2.5 py-0.5 rounded-full font-mono font-bold border ${
+            telemetry.distanceMm <= activeCase.safetyMarginMm
+              ? 'bg-[#ef4444]/15 text-[#dc2626] border-[#ef4444]/40 animate-pulse'
+              : 'bg-[#CDD5AE] text-[#334217] border-[#9ba96a]'
           }`}>
-            {(telemetry.marginStatus === 'BREACHED' || telemetry.marginStatus === 'CRITICAL') && <AlertTriangle className="w-3.5 h-3.5" />}
-            <span>{telemetry.marginStatus}</span>
-          </div>
+            {telemetry.distanceMm <= activeCase.safetyMarginMm ? 'NEAR SAFETY MARGIN' : 'SAFE CORRIDOR'}
+          </span>
         </div>
 
-        {/* Dynamic Margin Progress Bar */}
-        <div className="w-full bg-[#FAEDCD] rounded-full h-2.5 overflow-hidden border border-[#E9EDCA]">
+        {/* Dynamic Progress Indicator */}
+        <div className="w-full bg-white h-2.5 rounded-full overflow-hidden border border-[#E9EDCA] p-0.5">
           <div
-            className={`h-full transition-all duration-300 ${
-              telemetry.marginStatus === 'BREACHED' || telemetry.marginStatus === 'CRITICAL'
-                ? 'bg-[#ea580c]'
-                : telemetry.marginStatus === 'APPROACHING'
-                ? 'bg-[#D3A373]'
+            className={`h-full rounded-full transition-all duration-300 ${
+              telemetry.distanceMm <= activeCase.safetyMarginMm
+                ? 'bg-[#ef4444]'
                 : 'bg-gradient-to-r from-[#D3A373] via-[#CDD5AE] to-[#a3b171]'
             }`}
             style={{ width: `${Math.min(100, Math.max(0, (telemetry.distanceMm / 60) * 100))}%` }}
@@ -192,16 +231,16 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
         </div>
 
         <div className="flex justify-between text-[10px] text-[#7d6b56] font-mono">
-          <span>0 mm (Target Core)</span>
+          <span>0 mm (Target)</span>
           <span className="text-[#c2410c] font-bold">{activeCase.safetyMarginMm} mm Margin</span>
           <span>60+ mm</span>
         </div>
       </div>
 
-      {/* 3D Coordinates Grid (Pointer Tip vs Target Focal Point) */}
+      {/* 3D Coordinates Grid */}
       <div className="grid grid-cols-2 gap-2.5 text-xs">
         <div className="bg-white p-3 rounded-2xl border border-[#E9EDCA] shadow-xs">
-          <div className="text-[#7d6b56] text-[10px] mb-1.5 font-bold flex items-center gap-1.5">
+          <div className="text-[#7d6b56] text-[10px] mb-1.5 font-bold flex items-center gap-1.5 font-display">
             <span className="w-2 h-2 rounded-full bg-[#D3A373]" />
             Pointer Tip (RAS mm)
           </div>
@@ -213,7 +252,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
         </div>
 
         <div className="bg-white p-3 rounded-2xl border border-[#E9EDCA] shadow-xs">
-          <div className="text-[#7d6b56] text-[10px] mb-1.5 font-bold flex items-center gap-1.5">
+          <div className="text-[#7d6b56] text-[10px] mb-1.5 font-bold flex items-center gap-1.5 font-display">
             <span className="w-2 h-2 rounded-full bg-[#CDD5AE]" />
             Target Focal Point
           </div>
@@ -226,21 +265,21 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
       </div>
 
       {/* Trajectory Angles & Insertion Depth */}
-      <div className="grid grid-cols-3 gap-2 text-center text-xs bg-[#FAEDCD]/50 p-3 rounded-2xl border border-[#E9EDCA]">
+      <div className="grid grid-cols-3 gap-2 text-center text-xs bg-[#FAEDCD]/40 p-3 rounded-2xl border border-[#E9EDCA]">
         <div>
-          <div className="text-[10px] text-[#7d6b56] font-semibold">Insertion Depth</div>
+          <div className="text-[10px] text-[#7d6b56] font-semibold font-display">Insertion Depth</div>
           <div className="font-mono font-bold text-[#2e2417] mt-0.5 text-xs">
             {telemetry.trajectory.totalDepthMm.toFixed(1)} <span className="text-[10px] text-[#7d6b56]">mm</span>
           </div>
         </div>
         <div>
-          <div className="text-[10px] text-[#7d6b56] font-semibold">Azimuth (α)</div>
+          <div className="text-[10px] text-[#7d6b56] font-semibold font-display">Azimuth (α)</div>
           <div className="font-mono font-bold text-[#D3A373] mt-0.5 text-xs">
             {telemetry.trajectory.azimuthDeg.toFixed(1)}°
           </div>
         </div>
         <div>
-          <div className="text-[10px] text-[#7d6b56] font-semibold">Elevation (β)</div>
+          <div className="text-[10px] text-[#7d6b56] font-semibold font-display">Elevation (β)</div>
           <div className="font-mono font-bold text-[#5c6e2f] mt-0.5 text-xs">
             {telemetry.trajectory.elevationDeg.toFixed(1)}°
           </div>
@@ -258,7 +297,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
           }`}
         >
           <Layers className="w-3.5 h-3.5 text-[#54682b]" />
-          <span>Dual Trajectory</span>
+          <span className="font-display">Dual Trajectory</span>
         </button>
 
         <button
@@ -270,14 +309,14 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
           }`}
         >
           <Radio className={`w-3.5 h-3.5 ${isOpticalTrackingActive ? 'text-[#D3A373] animate-pulse' : 'text-[#7d6b56]'}`} />
-          <span>Optical Tracker (60Hz)</span>
+          <span className="font-display">Optical Tracker (60Hz)</span>
         </button>
       </div>
 
       {/* Optical Tracker Active Status Readout */}
       {isOpticalTrackingActive && (
-        <div className="bg-[#E9EDCA] border border-[#CDD5AE] rounded-xl p-2.5 text-[11px] font-mono flex items-center justify-between text-[#38461b] animate-fadeIn">
-          <span>NDI Polaris Stream: 60 FPS</span>
+        <div className="bg-[#E9EDCA] border border-[#CDD5AE] rounded-xl p-2.5 text-[11px] font-mono flex items-center justify-between text-[#38461b]">
+          <span>NDI Polaris: 60 FPS</span>
           <span>RMS: &lt;{opticalStatus.rmsErrorMm.toFixed(2)} mm</span>
           <span className="text-[#4e6024] font-bold">Q: {(opticalStatus.quality * 100).toFixed(1)}%</span>
         </div>
@@ -285,7 +324,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
 
       {/* Interactive Manual Probe Sliders */}
       <div className="space-y-2.5 bg-white p-3.5 rounded-2xl border border-[#E9EDCA] shadow-xs">
-        <div className="flex justify-between items-center text-xs font-bold text-[#382e21]">
+        <div className="flex justify-between items-center text-xs font-bold text-[#382e21] font-display">
           <span className="flex items-center gap-1.5">
             <Crosshair className="w-3.5 h-3.5 text-[#D3A373]" />
             MANUAL PROBE POSITION (MM)
@@ -329,14 +368,14 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
       <div className="flex gap-2 pt-1">
         <button
           onClick={handleToggleSimulation}
-          className={`flex-1 py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md ${
+          className={`flex-1 py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-xs ${
             isSimulating
-              ? 'bg-[#CDD5AE] hover:bg-[#b8c292] text-[#2c3814] shadow-[#CDD5AE]/30'
-              : 'bg-gradient-to-r from-[#D3A373] to-[#be8e5e] hover:from-[#be8e5e] hover:to-[#a47547] text-white shadow-[#D3A373]/25'
+              ? 'bg-[#CDD5AE] hover:bg-[#b8c292] text-[#2c3814]'
+              : 'bg-[#D3A373] hover:bg-[#be8e5e] text-white'
           }`}
         >
           <Play className="w-4 h-4 fill-current" />
-          <span>{isSimulating ? 'Pause Navigation' : 'Simulate Trajectory'}</span>
+          <span className="font-display">{isSimulating ? 'Pause Navigation' : 'Simulate Trajectory'}</span>
         </button>
 
         <button

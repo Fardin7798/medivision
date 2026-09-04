@@ -15,7 +15,7 @@ interface ThreeDSceneProps {
 
 // Global Anatomical Scale Factor (Converts clinical mm to 3D world units)
 const ANATOMICAL_SCALE = 0.28;
-const ANATOMICAL_Y_OFFSET = 20.0; // Offsets Superior-Inferior axis to cranial centroid
+const ANATOMICAL_Y_OFFSET = 20.0;
 
 // Helper: Convert DICOM RAS coordinates to 3D Scene World Coordinates
 const toWorldVector = (pos: Vector3D): THREE.Vector3 => {
@@ -77,7 +77,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     scene.background = new THREE.Color('#0f172a');
     sceneRef.current = scene;
 
-    // Perspective Camera (positioned for anatomical 3/4 view)
+    // Perspective Camera (3/4 anatomical viewpoint)
     const camera = new THREE.PerspectiveCamera(
       45,
       currentMount.clientWidth / currentMount.clientHeight,
@@ -116,7 +116,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     controls.target.set(0, 0, 0);
     controlsRef.current = controls;
 
-    // High-Tech Surgical Lighting Rig (Electric Cyan & Ice White Studio)
+    // High-Tech Surgical Lighting Rig
     const ambientLight = new THREE.AmbientLight(0xe0f2fe, 1.6);
     scene.add(ambientLight);
 
@@ -137,7 +137,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     bottomBounce.position.set(0, -60, 0);
     scene.add(bottomBounce);
 
-    // Spatial Reference Grid (Surgical Blue Neon)
+    // Spatial Reference Grid
     const gridHelper = new THREE.GridHelper(90, 18, 0x38bdf8, 0x1e293b);
     gridHelper.position.y = -24;
     gridHelperRef.current = gridHelper;
@@ -148,14 +148,13 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     loadedModelsGroupRef.current = modelsGroup;
     scene.add(modelsGroup);
 
-    // 3D GLTF Mesh Loader & Anatomical Calibrator
+    // 3D GLTF Mesh Loader & Calibrator
     setModelLoading(true);
     const gltfLoader = new GLTFLoader();
 
     const BRAIN_COLOR = 0x38bdf8; // Vivid Medical Cyan Blue
     const SKULL_COLOR = 0xe2e8f0; // Platinum Bone Ivory
 
-    // Helper: Normalize, Align Axes, and Calibrate scale & center
     const calibrateModel = (
       model: THREE.Group,
       type: 'brain' | 'skull',
@@ -163,35 +162,28 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       opacity: number = 0.94,
       wire: boolean = false
     ) => {
-      // 1. Correct intrinsic glTF axis misalignment:
-      // brain.glb has frontal lobe at -X and occipital at +X.
-      // Rotating by +90 deg around Y aligns frontal lobe with +Z (face direction).
+      // Axis alignment: +90 deg Y-rotation for brain.glb
       if (type === 'brain') {
         model.rotation.y = Math.PI / 2;
       }
 
-      // 2. Compute bounding box after rotation
       const initialBox = new THREE.Box3().setFromObject(model);
       const initialSize = initialBox.getSize(new THREE.Vector3());
       const maxDim = Math.max(initialSize.x, initialSize.y, initialSize.z) || 1;
 
-      // 3. Proportional scale
       const scaleFactor = targetDim / maxDim;
       model.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
-      // 4. Center geometry exactly at anatomical center (0, 0, 0)
       const scaledBox = new THREE.Box3().setFromObject(model);
       const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
       model.position.x -= scaledCenter.x;
       model.position.y -= scaledCenter.y;
       model.position.z -= scaledCenter.z;
 
-      // Slight Y offset adjustment so brain sits precisely inside skull cranial fossa
       if (type === 'brain') {
         model.position.y += 1.5;
       }
 
-      // 5. Apply Double-Sided PBR shaders
       model.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
@@ -217,11 +209,9 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       return model;
     };
 
-    // Helper: Build Procedural Fallback Mesh
     const buildProceduralFallback = (type: 'brain' | 'skull') => {
       const group = new THREE.Group();
       if (type === 'brain') {
-        // Left & Right Cerebral Hemispheres aligned along +Z (Anterior) and -Z (Posterior)
         const leftHemi = new THREE.Mesh(
           new THREE.SphereGeometry(14, 36, 36),
           new THREE.MeshStandardMaterial({
@@ -254,7 +244,6 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
         rightHemi.scale.set(0.95, 1.1, 1.3);
         group.add(rightHemi);
 
-        // Cerebellum (Posterior-Inferior, -Z)
         const cerebellum = new THREE.Mesh(
           new THREE.SphereGeometry(8.5, 28, 28),
           new THREE.MeshStandardMaterial({
@@ -269,7 +258,6 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
         cerebellum.scale.set(1.4, 0.9, 1.0);
         group.add(cerebellum);
 
-        // Brainstem (Inferior base)
         const brainstem = new THREE.Mesh(
           new THREE.CylinderGeometry(3.0, 2.2, 12, 24),
           new THREE.MeshStandardMaterial({
@@ -281,7 +269,6 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
         brainstem.position.set(0, -12, -3.5);
         group.add(brainstem);
       } else {
-        // High-poly Anatomical Cranial Vault in Platinum Bone
         const cranium = new THREE.Mesh(
           new THREE.SphereGeometry(18, 40, 40),
           new THREE.MeshStandardMaterial({
@@ -298,7 +285,6 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
         cranium.position.set(0, 0, 0);
         group.add(cranium);
 
-        // Facial Bone & Orbit Cavities at +Z (Face direction)
         const leftOrbit = new THREE.Mesh(
           new THREE.TorusGeometry(3.6, 1.1, 16, 24),
           new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5 })
@@ -317,7 +303,6 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     };
 
     if (modelType === 'dual') {
-      // Combined Dual Mode: 30% Translucent Skull + Solid Blue Internal Brain
       let loadedCount = 0;
       const checkDone = () => {
         loadedCount++;
@@ -361,7 +346,6 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
         }
       );
     } else {
-      // Single Model Load: Brain or Skull
       const modelUrl = modelType === 'brain' ? '/models/brain.glb' : '/models/skull.glb';
       const targetDim = modelType === 'brain' ? 36 : 46;
 
@@ -381,7 +365,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       );
     }
 
-    // Unified 3D Target Tumor Focal Point (Converted to World Space)
+    // Unified 3D Target Tumor
     const targetWorldPos = toWorldVector(activeCase.targetPosition);
 
     const targetGeo = new THREE.SphereGeometry(3.5, 24, 24);
@@ -397,7 +381,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     targetMeshRef.current = targetMesh;
     scene.add(targetMesh);
 
-    // Safety Margin Halo (Pulsing Amber Wireframe Shell)
+    // Safety Margin Halo
     const haloRadius = 3.5 + activeCase.safetyMarginMm * ANATOMICAL_SCALE;
     const haloGeo = new THREE.SphereGeometry(haloRadius, 20, 20);
     const haloMat = new THREE.MeshBasicMaterial({
@@ -410,7 +394,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     haloMesh.position.copy(targetWorldPos);
     scene.add(haloMesh);
 
-    // Primary Surgical Probe Tool (High-Precision Titanium Stylus)
+    // Primary Surgical Probe Tool
     const probeGroup = new THREE.Group();
     const handleGeo = new THREE.CylinderGeometry(0.9, 0.9, 22, 16);
     const handleMat = new THREE.MeshStandardMaterial({
@@ -438,7 +422,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     probeRef.current = probeGroup;
     scene.add(probeGroup);
 
-    // Primary Trajectory Laser Beam (Electric Cyan)
+    // Primary Trajectory Laser Beam
     const lineMat = new THREE.LineDashedMaterial({
       color: 0x38bdf8,
       dashSize: 1.8,
@@ -451,7 +435,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     trajectoryLineRef.current = trajectoryLine;
     scene.add(trajectoryLine);
 
-    // Secondary Trajectory Probe (Dual Corridor Mode)
+    // Secondary Trajectory Probe
     const secProbeGroup = probeGroup.clone();
     secProbeGroup.visible = isDualTrajectoryActive;
     secondaryProbeRef.current = secProbeGroup;
@@ -471,13 +455,12 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     secondaryLineRef.current = secTrajectoryLine;
     scene.add(secTrajectoryLine);
 
-    // Smooth 60 FPS Render Loop
+    // Render Loop
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
       controls.update();
 
-      // Pulsate target tumor core gently
       const pulse = 1 + Math.sin(Date.now() * 0.0035) * 0.06;
       targetMesh.scale.set(pulse, pulse, pulse);
 
@@ -485,7 +468,6 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     };
     animate();
 
-    // Responsive Canvas Resize
     const handleResize = () => {
       if (!currentMount) return;
       camera.aspect = currentMount.clientWidth / currentMount.clientHeight;
@@ -505,24 +487,19 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     };
   }, [activeCase, modelType, isWireframe]);
 
-  // Toggle Spatial Grid
   useEffect(() => {
     if (gridHelperRef.current) {
       gridHelperRef.current.visible = showGrid;
     }
   }, [showGrid]);
 
-  // Real-time Probe Coordinate & Laser Trajectory Update
   useEffect(() => {
     if (probeRef.current && targetMeshRef.current && trajectoryLineRef.current) {
       const probeWorldPos = toWorldVector(pointerPosition);
       probeRef.current.position.copy(probeWorldPos);
-
-      // Point needle towards target
       probeRef.current.lookAt(targetMeshRef.current.position);
       probeRef.current.rotateX(Math.PI / 2);
 
-      // Update trajectory laser line
       const positions = trajectoryLineRef.current.geometry.attributes.position;
       positions.setXYZ(0, probeWorldPos.x, probeWorldPos.y, probeWorldPos.z);
       positions.setXYZ(
@@ -571,32 +548,32 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
   };
 
   return (
-    <div className="relative aspect-[16/10] w-full glass-panel rounded-3xl overflow-hidden shadow-md border border-[#E9EDCA]">
+    <div className="relative aspect-[16/10] w-full solid-panel rounded-3xl overflow-hidden shadow-sm border border-[#E9EDCA]">
       <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
-      {/* Model Loading Spinner */}
+      {/* Solid Model Loading Banner */}
       {modelLoading && (
-        <div className="absolute inset-0 bg-[#0f172a]/70 backdrop-blur-sm flex items-center justify-center gap-2.5 text-[#e0f2fe] text-xs font-bold z-20">
+        <div className="absolute inset-0 bg-[#0f172a]/80 flex items-center justify-center gap-2.5 text-[#e0f2fe] text-xs font-bold z-20 font-display">
           <Loader2 className="w-5 h-5 animate-spin text-[#38bdf8]" />
           <span>Calibrating & Aligning 3D Anatomical Meshes...</span>
         </div>
       )}
 
-      {/* Top HUD Controls & 3D Model View Mode Switcher */}
+      {/* Top Controls: Solid Floating Toolbar (No Glassmorphism) */}
       <div className="absolute top-3.5 left-3.5 right-3.5 flex flex-wrap items-center justify-between gap-2 pointer-events-none z-10">
         <div className="flex items-center gap-2 pointer-events-auto">
-          <div className="bg-[#FEF9E1]/95 backdrop-blur-md px-3 py-1.5 rounded-xl text-xs font-bold text-[#2e2417] flex items-center gap-2 shadow-md border border-[#E9EDCA]">
+          <div className="bg-white px-3 py-1.5 rounded-xl text-xs font-bold text-[#2e2417] flex items-center gap-2 shadow-xs border border-[#E9EDCA] font-display">
             <span className="w-2 h-2 rounded-full bg-[#0284c7] animate-pulse" />
             <span>3D Anatomical Suite</span>
           </div>
 
-          <div className="flex items-center gap-1 bg-[#FEF9E1]/95 backdrop-blur-md p-1 rounded-xl text-[11px] font-bold border border-[#E9EDCA] shadow-xs">
+          <div className="flex items-center gap-1 bg-white p-1 rounded-xl text-[11px] font-bold border border-[#E9EDCA] shadow-xs">
             <button
               onClick={() => setModelType('brain')}
               className={`px-3 py-1 rounded-lg transition-all ${
                 modelType === 'brain'
                   ? 'bg-[#0284c7] text-white shadow-xs font-black'
-                  : 'text-[#5c4a38] hover:text-[#2e2417]'
+                  : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
               }`}
             >
               🧠 Brain Mesh
@@ -606,7 +583,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
               className={`px-3 py-1 rounded-lg transition-all ${
                 modelType === 'skull'
                   ? 'bg-[#0284c7] text-white shadow-xs font-black'
-                  : 'text-[#5c4a38] hover:text-[#2e2417]'
+                  : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
               }`}
             >
               💀 Skull Mesh
@@ -616,9 +593,9 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
               className={`px-3 py-1 rounded-lg transition-all ${
                 modelType === 'dual'
                   ? 'bg-[#38bdf8] text-[#0f172a] shadow-xs font-black'
-                  : 'text-[#5c4a38] hover:text-[#2e2417]'
+                  : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
               }`}
-              title="Calibrated Craniotomy View: Concentric Skull and Brain"
+              title="Calibrated Craniotomy View"
             >
               ✨ Skull + Brain
             </button>
@@ -632,7 +609,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
             className={`p-2 rounded-xl text-xs font-bold transition-all border shadow-xs ${
               showGrid
                 ? 'bg-[#FAEDCD] border-[#D3A373] text-[#784819]'
-                : 'bg-[#FEF9E1]/95 backdrop-blur-md border-[#E9EDCA] text-[#5c4a38] hover:text-[#2e2417]'
+                : 'bg-white border-[#E9EDCA] text-[#5c4a38] hover:text-[#2e2417]'
             }`}
             title="Toggle Spatial Reference Grid"
           >
@@ -644,7 +621,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
             className={`p-2 rounded-xl text-xs font-bold transition-all border shadow-xs ${
               isWireframe
                 ? 'bg-[#E9EDCA] border-[#CDD5AE] text-[#3e4c1f]'
-                : 'bg-[#FEF9E1]/95 backdrop-blur-md border-[#E9EDCA] text-[#5c4a38] hover:text-[#2e2417]'
+                : 'bg-white border-[#E9EDCA] text-[#5c4a38] hover:text-[#2e2417]'
             }`}
             title="Toggle Mesh Wireframe Mode"
           >
@@ -653,7 +630,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
 
           <button
             onClick={handleResetCamera}
-            className="p-2 rounded-xl bg-[#FEF9E1]/95 backdrop-blur-md border border-[#E9EDCA] text-[#5c4a38] hover:text-[#2e2417] shadow-xs transition-all"
+            className="p-2 rounded-xl bg-white border border-[#E9EDCA] text-[#5c4a38] hover:text-[#2e2417] shadow-xs transition-all"
             title="Reset Camera Orientation"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -662,23 +639,23 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       </div>
 
       {/* Bottom Corner Interaction Guide */}
-      <div className="absolute bottom-3 left-3 text-[10px] text-[#2e2417] font-mono bg-[#FEF9E1]/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-[#E9EDCA] shadow-sm pointer-events-none flex items-center gap-3 font-semibold">
-        <span>🖱️ Orbit: Left Click + Drag</span>
+      <div className="absolute bottom-3 left-3 text-[10px] text-[#2e2417] font-mono bg-white px-3 py-1.5 rounded-xl border border-[#E9EDCA] shadow-xs pointer-events-none flex items-center gap-3 font-semibold">
+        <span>🖱️ Orbit: Drag</span>
         <span>•</span>
-        <span>Pan: Right Click + Drag</span>
+        <span>Pan: Right-Drag</span>
         <span>•</span>
         <span>Zoom: Scroll</span>
       </div>
 
       {/* Bottom Right Legend */}
       <div className="absolute bottom-3 right-3 flex items-center gap-2 pointer-events-none">
-        <div className="bg-[#FEF9E1]/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[#ef4444] text-[10px] text-[#dc2626] font-bold flex items-center gap-1.5 shadow-sm">
+        <div className="bg-white px-2.5 py-1 rounded-lg border border-[#ef4444] text-[10px] text-[#dc2626] font-bold flex items-center gap-1.5 shadow-xs font-display">
           <span className="w-2 h-2 rounded-full bg-[#ef4444] animate-pulse" />
           <span>Tumor Target</span>
         </div>
-        <div className="bg-[#FEF9E1]/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[#38bdf8] text-[10px] text-[#0284c7] font-bold flex items-center gap-1.5 shadow-sm">
+        <div className="bg-white px-2.5 py-1 rounded-lg border border-[#38bdf8] text-[10px] text-[#0284c7] font-bold flex items-center gap-1.5 shadow-xs font-display">
           <span className="w-2 h-2 rounded-full bg-[#38bdf8]" />
-          <span>{activeCase.safetyMarginMm}mm Margin Halo</span>
+          <span>{activeCase.safetyMarginMm}mm Margin</span>
         </div>
       </div>
     </div>

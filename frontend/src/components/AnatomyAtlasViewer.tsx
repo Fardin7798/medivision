@@ -67,12 +67,12 @@ export const AnatomyAtlasViewer: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<AtlasModel>(ATLAS_MODELS[0]);
 
   return (
-    <div className="glass-panel border border-[#E9EDCA] rounded-3xl p-4 shadow-md flex flex-col gap-4">
+    <div className="solid-panel border border-[#E9EDCA] rounded-3xl p-4 shadow-sm flex flex-col gap-4">
       {/* Header & Model Selector */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E9EDCA] pb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-[#D3A373]" />
-          <h2 className="text-xs uppercase tracking-wider font-bold text-[#2e2417]">
+          <h2 className="text-xs uppercase tracking-wider font-bold text-[#2e2417] font-display">
             3D Anatomy Atlas (Ready-Made 4K Cloud Models)
           </h2>
           <span className="text-[10px] bg-[#E9EDCA] text-[#485626] font-mono px-2.5 py-0.5 rounded-full border border-[#CDD5AE] font-semibold flex items-center gap-1 shadow-xs">
@@ -82,24 +82,24 @@ export const AnatomyAtlasViewer: React.FC = () => {
         </div>
 
         {/* Organ Switcher Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-[#FAEDCD] p-1.5 rounded-2xl border border-[#E9EDCA] text-xs">
+        <div className="flex flex-wrap items-center gap-1 bg-[#FAEDCD] p-1 rounded-xl border border-[#E9EDCA] text-xs">
           {ATLAS_MODELS.map((model) => (
             <button
               key={model.id}
               onClick={() => setSelectedModel(model)}
-              className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
                 selectedModel.id === model.id
-                  ? 'bg-[#D3A373] text-white shadow-md shadow-[#D3A373]/25'
+                  ? 'bg-[#D3A373] text-white shadow-xs'
                   : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FEF9E1]'
               }`}
             >
-              {model.id === 'heart' && <Heart className="w-3.5 h-3.5 text-[#c2410c]" />}
-              {model.id === 'brain' && <Brain className="w-3.5 h-3.5 text-[#8c5a2b]" />}
+              {model.id === 'heart' && <Heart className="w-3.5 h-3.5 text-[#ef4444]" />}
+              {model.id === 'brain' && <Brain className="w-3.5 h-3.5 text-[#0284c7]" />}
               {model.id === 'liver' && <Layers className="w-3.5 h-3.5 text-[#d97706]" />}
               {model.id === 'spine' && <Activity className="w-3.5 h-3.5 text-[#54682b]" />}
               {model.id === 'skull' && <Bone className="w-3.5 h-3.5 text-[#6b7280]" />}
               {model.id === 'lungs' && <Eye className="w-3.5 h-3.5 text-[#0284c7]" />}
-              <span>
+              <span className="font-display">
                 {model.id === 'heart' && 'Heart V2.0'}
                 {model.id === 'brain' && 'Brain Sagittal'}
                 {model.id === 'liver' && 'Liver & Gallbladder'}
@@ -113,7 +113,7 @@ export const AnatomyAtlasViewer: React.FC = () => {
       </div>
 
       {/* Main 3D Embedded Viewer Frame */}
-      <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden border border-[#E9EDCA] bg-[#192116] shadow-inner">
+      <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden border border-[#E9EDCA] bg-[#161c13] shadow-inner">
         <iframe
           key={selectedModel.id}
           title={selectedModel.name}
@@ -125,10 +125,10 @@ export const AnatomyAtlasViewer: React.FC = () => {
       </div>
 
       {/* Model Metadata & Anatomical Key Structures */}
-      <div className="bg-[#FAEDCD]/60 border border-[#E9EDCA] rounded-2xl p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs shadow-xs">
+      <div className="bg-[#FAEDCD]/40 border border-[#E9EDCA] rounded-2xl p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs shadow-xs">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-[#2e2417] text-sm">{selectedModel.name}</span>
+            <span className="font-bold text-[#2e2417] text-sm font-display">{selectedModel.name}</span>
             <span className="text-[10px] bg-[#E9EDCA] text-[#445220] px-2 py-0.5 rounded font-mono font-semibold">
               {selectedModel.category}
             </span>
