@@ -8,8 +8,7 @@ import {
   FileText,
   CheckCircle2,
   X,
-  Sparkles,
-  Loader2,
+    Loader2,
   Camera,
 } from 'lucide-react';
 
@@ -157,7 +156,7 @@ export const CustomScanUploadModal: React.FC<CustomScanUploadModalProps> = ({
               </>
             ) : (
               <>
-                <Sparkles className="w-3.5 h-3.5" />
+                <Camera className="w-3.5 h-3.5" />
                 <span>Scan Slip / Image</span>
               </>
             )}

@@ -7,12 +7,12 @@ import {
   Activity,
   ChevronDown,
   Layers,
-  Sparkles,
+  BrainCircuit,
   Crosshair,
-  Box,
+  Layers2,
   Upload,
   CheckCircle2,
-  Stethoscope,
+  ClipboardList,
   Shield,
   Cloud
 } from 'lucide-react';
@@ -109,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FEF9E1]'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#445220]" />
+            <BrainCircuit className="w-3.5 h-3.5 text-[#445220]" />
             <span>AI Segmentation</span>
           </button>
 
@@ -121,7 +121,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FEF9E1]'
             }`}
           >
-            <Box className="w-3.5 h-3.5" />
+            <Layers2 className="w-3.5 h-3.5" />
             <span>3D Layers</span>
           </button>
         </nav>
@@ -158,7 +158,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="flex items-center gap-2 bg-white hover:bg-[#FAEDCD]/50 text-[#2e2417] border border-[#E9EDCA] px-3 py-1.5 rounded-xl text-xs transition-all shadow-xs whitespace-nowrap"
             >
-              <Stethoscope className="w-3.5 h-3.5 text-[#D3A373]" />
+              <ClipboardList className="w-3.5 h-3.5 text-[#D3A373]" />
               <div className="text-left">
                 <span className="text-[9px] text-[#7d6b56] block font-mono uppercase tracking-wider font-semibold">
                   CASE SCENARIO

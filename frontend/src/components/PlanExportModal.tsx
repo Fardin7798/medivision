@@ -12,10 +12,12 @@ import {
   ShieldCheck,
   Download,
   Cloud,
-  Sparkles,
+  BrainCircuit,
   Loader2,
   FolderOpen,
   Volume2,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 
 interface PlanExportModalProps {
@@ -209,7 +211,7 @@ export const PlanExportModal: React.FC<PlanExportModalProps> = ({
         <div className="bg-[#FEF9E1] border border-[#E9EDCA] p-3.5 rounded-2xl space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-bold text-[#2e2417] font-display">
-              <Sparkles className="w-3.5 h-3.5 text-[#D3A373]" />
+              <BrainCircuit className="w-3.5 h-3.5 text-[#D3A373]" />
               <span>Puter AI Surgical Assessment</span>
             </div>
             <button
@@ -224,7 +226,7 @@ export const PlanExportModal: React.FC<PlanExportModalProps> = ({
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-3 h-3" />
+                  <BrainCircuit className="w-3 h-3" />
                   <span>{aiReport ? 'Re-Generate AI Report' : 'Generate AI Assessment'}</span>
                 </>
               )}
@@ -261,7 +263,7 @@ export const PlanExportModal: React.FC<PlanExportModalProps> = ({
                 <FolderOpen className="w-3.5 h-3.5 text-[#D3A373]" />
                 <span>Puter Cloud Saved Cases ({savedPlans.length})</span>
               </span>
-              <span className="text-[10px] text-[#784819] font-mono">{showSavedList ? '▲ Hide' : '▼ Show'}</span>
+              <span className="text-[10px] text-[#784819] font-mono flex items-center gap-1">{showSavedList ? <><ChevronUp className="w-3 h-3" /> Hide</> : <><ChevronDown className="w-3 h-3" /> Show</>}</span>
             </button>
 
             {showSavedList && (

@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ClinicalCase, Vector3D } from '@/types';
-import { Grid, RotateCcw, Eye, Loader2 } from 'lucide-react';
+import { Grid, RotateCcw, Eye, Loader2, Brain, Skull, MousePointer } from 'lucide-react';
 
 interface ThreeDSceneProps {
   activeCase: ClinicalCase;
@@ -432,23 +432,25 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
           <div className="flex items-center gap-1 bg-white p-1 rounded-xl text-[11px] font-bold border border-[#E9EDCA] shadow-xs">
             <button
               onClick={() => setModelType('brain')}
-              className={`px-3 py-1.5 rounded-lg transition-all font-display ${
+              className={`px-3 py-1.5 rounded-lg transition-all font-display flex items-center gap-1.5 ${
                 modelType === 'brain'
                   ? 'bg-[#0284c7] text-white shadow-xs font-black'
                   : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
               }`}
             >
-              🧠 Brain Mesh
+              <Brain className="w-3.5 h-3.5" />
+              <span>Brain Mesh</span>
             </button>
             <button
               onClick={() => setModelType('skull')}
-              className={`px-3 py-1.5 rounded-lg transition-all font-display ${
+              className={`px-3 py-1.5 rounded-lg transition-all font-display flex items-center gap-1.5 ${
                 modelType === 'skull'
                   ? 'bg-[#0284c7] text-white shadow-xs font-black'
                   : 'text-[#5c4a38] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
               }`}
             >
-              💀 Skull Mesh
+              <Skull className="w-3.5 h-3.5" />
+              <span>Skull Mesh</span>
             </button>
           </div>
         </div>
@@ -491,7 +493,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
 
       {/* Bottom Corner Interaction Guide */}
       <div className="absolute bottom-3 left-3 text-[10px] text-[#2e2417] font-mono bg-white px-3 py-1.5 rounded-xl border border-[#E9EDCA] shadow-xs pointer-events-none flex items-center gap-3 font-semibold">
-        <span>🖱️ Orbit: Drag</span>
+        <span className="flex items-center gap-1.5"><MousePointer className="w-3 h-3 text-[#784819]" /> Orbit: Drag</span>
         <span>•</span>
         <span>Pan: Right-Drag</span>
         <span>•</span>

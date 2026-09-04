@@ -18,10 +18,10 @@ import { RegistrationModal } from '@/components/RegistrationModal';
 import { PlanExportModal } from '@/components/PlanExportModal';
 import { CustomScanUploadModal } from '@/components/CustomScanUploadModal';
 import {
-  Sparkles,
+  BrainCircuit,
   Layers,
   Crosshair,
-  Box,
+  Layers2,
   ShieldCheck,
   FileDown,
   GitCommit,
@@ -159,7 +159,7 @@ export default function Home() {
                       : 'text-[#6d5d4b] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
                   }`}
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-[#54682b]" />
+                  <BrainCircuit className="w-3.5 h-3.5 text-[#54682b]" />
                   <span className="font-display">Cranial Structure Atlas</span>
                 </button>
               </div>
@@ -262,8 +262,8 @@ export default function Home() {
                     : 'text-[#6d5d4b] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate font-display">AI</span>
+                <BrainCircuit className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate font-display">AI Contouring</span>
               </button>
               
               <button
@@ -274,7 +274,7 @@ export default function Home() {
                     : 'text-[#6d5d4b] hover:text-[#2e2417] hover:bg-[#FAEDCD]'
                 }`}
               >
-                <Box className="w-3.5 h-3.5 shrink-0" />
+                <Layers2 className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate font-display">3D Layers</span>
               </button>
             </div>

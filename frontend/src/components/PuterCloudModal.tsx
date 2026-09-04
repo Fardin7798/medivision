@@ -9,7 +9,7 @@ import {
   LogOut,
   HardDrive,
   Database,
-  Sparkles,
+  BrainCircuit,
   FileText,
   Volume2,
   CheckCircle2,
@@ -225,7 +225,7 @@ export const PuterCloudModal: React.FC<PuterCloudModalProps> = ({
 
               <div className="p-3.5 rounded-2xl bg-white border border-[#E9EDCA] shadow-xs flex items-start gap-3">
                 <div className="p-2 rounded-xl bg-[#CDD5AE] text-[#334217] shrink-0">
-                  <Sparkles className="w-4 h-4" />
+                  <BrainCircuit className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center justify-between">

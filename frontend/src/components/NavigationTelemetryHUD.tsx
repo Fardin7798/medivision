@@ -7,9 +7,9 @@ import { PuterClient } from '@/lib/puter/client';
 import {
   Crosshair,
   Layers,
-  Radio,
+  ScanEye,
   RotateCcw,
-  Play,
+  LocateFixed,
   FileDown,
   Compass,
   Volume2,
@@ -365,7 +365,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
               : 'bg-white border-[#E9EDCA] text-[#5c4a38] hover:border-[#D3A373] hover:bg-[#FAEDCD]'
           }`}
         >
-          <Radio className={`w-3.5 h-3.5 ${isOpticalTrackingActive ? 'text-[#D3A373] animate-pulse' : 'text-[#7d6b56]'}`} />
+          <ScanEye className={`w-3.5 h-3.5 ${isOpticalTrackingActive ? 'text-[#D3A373] animate-pulse' : 'text-[#7d6b56]'}`} />
           <span className="font-display">Optical Tracker (60Hz)</span>
         </button>
       </div>
@@ -431,7 +431,7 @@ export const NavigationTelemetryHUD: React.FC<NavigationTelemetryHUDProps> = ({
               : 'bg-[#D3A373] hover:bg-[#be8e5e] text-white'
           }`}
         >
-          <Play className="w-4 h-4 fill-current" />
+          <LocateFixed className="w-4 h-4" />
           <span className="font-display">{isSimulating ? 'Pause Navigation' : 'Interactive Tracking Demo'}</span>
         </button>
 

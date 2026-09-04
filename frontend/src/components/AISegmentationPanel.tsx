@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { ClinicalCase, Vector3D } from '@/types';
 import { PuterClient } from '@/lib/puter/client';
 import {
-  Sparkles,
+  BrainCircuit,
   Cpu,
   RefreshCw,
   CheckCircle2,
@@ -14,6 +14,8 @@ import {
   Loader2,
   ChevronRight,
   ShieldAlert,
+  ShieldCheck,
+  Compass,
 } from 'lucide-react';
 
 interface AISegmentationPanelProps {
@@ -54,7 +56,7 @@ export const AISegmentationPanel: React.FC<AISegmentationPanelProps> = ({
       <div className="flex items-center justify-between border-b border-[#E9EDCA] pb-3">
         <div className="flex items-center gap-2">
           <div className="p-2 rounded-xl bg-[#E9EDCA] text-[#425020] border border-[#CDD5AE]">
-            <Sparkles className="w-4 h-4 text-[#54682b]" />
+            <BrainCircuit className="w-4 h-4 text-[#54682b]" />
           </div>
           <div>
             <h2 className="text-xs uppercase tracking-wider font-extrabold text-[#2e2417] font-display">
@@ -175,7 +177,7 @@ export const AISegmentationPanel: React.FC<AISegmentationPanelProps> = ({
                 : 'bg-white border-[#E9EDCA] text-[#5c4a38] hover:bg-[#FAEDCD]'
             }`}
           >
-            <span>🛡️ Margin Safety</span>
+            <ShieldCheck className="w-3 h-3 text-[#5c6e2f] shrink-0" /><span>Margin Safety</span>
           </button>
           <button
             onClick={() => handleAskCopilot('Suggest Optimal Trajectory Entry Angle')}
@@ -186,7 +188,7 @@ export const AISegmentationPanel: React.FC<AISegmentationPanelProps> = ({
                 : 'bg-white border-[#E9EDCA] text-[#5c4a38] hover:bg-[#FAEDCD]'
             }`}
           >
-            <span>📐 Entry Vector</span>
+            <Compass className="w-3 h-3 text-[#D3A373] shrink-0" /><span>Entry Vector</span>
           </button>
           <button
             onClick={() => handleAskCopilot('Eloquent Cortex & Vessel Risk Assessment')}
@@ -197,7 +199,7 @@ export const AISegmentationPanel: React.FC<AISegmentationPanelProps> = ({
                 : 'bg-white border-[#E9EDCA] text-[#5c4a38] hover:bg-[#FAEDCD]'
             }`}
           >
-            <span>⚠️ Cortex Risk</span>
+            <ShieldAlert className="w-3 h-3 text-[#c2410c] shrink-0" /><span>Cortex Risk</span>
           </button>
         </div>
 

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { AnatomicalStructure } from '@/types';
-import { Eye, EyeOff, Box, Sliders } from 'lucide-react';
+import { Eye, EyeOff, Layers2, Sliders } from 'lucide-react';
 
 interface OrganVisibilityPanelProps {
   structures: AnatomicalStructure[];
@@ -21,7 +21,7 @@ export const OrganVisibilityPanel: React.FC<OrganVisibilityPanelProps> = ({
       <div className="flex items-center justify-between border-b border-[#E9EDCA] pb-3">
         <div className="flex items-center gap-2">
           <div className="p-2 rounded-xl bg-[#E9EDCA] text-[#425020] border border-[#CDD5AE]">
-            <Box className="w-4 h-4 text-[#54682b]" />
+            <Layers2 className="w-4 h-4 text-[#54682b]" />
           </div>
           <div>
             <h2 className="text-xs uppercase tracking-wider font-extrabold text-[#2e2417] font-display">

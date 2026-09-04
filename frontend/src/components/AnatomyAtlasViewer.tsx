@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Heart, Brain, Bone, Activity, Sparkles, ShieldCheck, Layers, Eye } from 'lucide-react';
+import { Heart, Brain, Bone, Activity, BrainCircuit, ShieldCheck, Layers, Eye, CheckCircle2 } from 'lucide-react';
 
 interface AtlasModel {
   id: string;
@@ -71,7 +71,7 @@ export const AnatomyAtlasViewer: React.FC = () => {
       {/* Header & Model Selector */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E9EDCA] pb-3">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-[#D3A373]" />
+          <BrainCircuit className="w-4 h-4 text-[#D3A373]" />
           <h2 className="text-xs uppercase tracking-wider font-bold text-[#2e2417] font-display">
             Cranial Anatomy Atlas & Volumetric Reference
           </h2>
@@ -142,7 +142,7 @@ export const AnatomyAtlasViewer: React.FC = () => {
               key={idx}
               className="text-[10px] bg-[#E9EDCA] text-[#3e4c1f] px-2.5 py-1 rounded-lg border border-[#CDD5AE] font-mono font-semibold"
             >
-              ✓ {st}
+              <span className="inline-flex items-center gap-1"><CheckCircle2 className="w-2.5 h-2.5 text-[#4e6024]" />{st}</span>
             </span>
           ))}
         </div>
