@@ -13,16 +13,18 @@ interface ThreeDSceneProps {
   isDualTrajectoryActive: boolean;
 }
 
-// Global Anatomical Scale Factor (Converts clinical mm to 3D world units)
-const ANATOMICAL_SCALE = 0.28;
-const ANATOMICAL_Y_OFFSET = 20.0;
+// Unified Anatomical Coordinate Mapping (DICOM RAS -> 3D World)
+// RAS (Right-Anterior-Superior) -> Three.js (X: Right, Y: Superior, Z: Anterior)
+const SCALE_X = 0.22;
+const SCALE_Y = 0.22; // Superior-Inferior scale
+const SCALE_Z = 0.22; // Anterior-Posterior scale
+const Y_MIDLINE_OFFSET = 36.0; // Aligns DICOM Z center with cranial vault center
 
-// Helper: Convert DICOM RAS coordinates to 3D Scene World Coordinates
 const toWorldVector = (pos: Vector3D): THREE.Vector3 => {
   return new THREE.Vector3(
-    pos.x * ANATOMICAL_SCALE,
-    (pos.z - ANATOMICAL_Y_OFFSET) * ANATOMICAL_SCALE,
-    pos.y * ANATOMICAL_SCALE
+    pos.x * SCALE_X,
+    (pos.z - Y_MIDLINE_OFFSET) * SCALE_Y,
+    pos.y * SCALE_Z
   );
 };
 
@@ -72,19 +74,19 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       });
     };
 
-    // Initialize Three.js Scene with Deep Clinical Slate Background
+    // Initialize Three.js Scene
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#0f172a');
     sceneRef.current = scene;
 
-    // Perspective Camera (3/4 anatomical viewpoint)
+    // Perspective Camera (Surgical 3/4 viewpoint)
     const camera = new THREE.PerspectiveCamera(
       45,
       currentMount.clientWidth / currentMount.clientHeight,
       0.1,
       1000
     );
-    camera.position.set(45, 30, 85);
+    camera.position.set(38, 22, 75);
     cameraRef.current = camera;
 
     // WebGL Renderer with High Precision Anti-Aliasing
@@ -113,11 +115,11 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     controls.dampingFactor = 0.06;
     controls.maxDistance = 250;
     controls.minDistance = 15;
-    controls.target.set(0, 4, 0);
+    controls.target.set(0, 0, 0); // Focus exactly at cranial anatomical center
     controlsRef.current = controls;
 
     // High-Tech Surgical Lighting Rig
-    const ambientLight = new THREE.AmbientLight(0xe0f2fe, 1.7);
+    const ambientLight = new THREE.AmbientLight(0xe0f2fe, 1.8);
     scene.add(ambientLight);
 
     const keyLight = new THREE.DirectionalLight(0x38bdf8, 3.2);
@@ -148,254 +150,149 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     loadedModelsGroupRef.current = modelsGroup;
     scene.add(modelsGroup);
 
-    // 3D GLTF Mesh Loader & Calibrator
     setModelLoading(true);
     const gltfLoader = new GLTFLoader();
 
-    const BRAIN_COLOR = 0x38bdf8; // Vivid Medical Cyan Blue
-    const SKULL_COLOR = 0xe2e8f0; // Platinum Bone Ivory
+    const BRAIN_CYAN = 0x38bdf8;
+    const SKULL_BONE = 0xe2e8f0;
 
-    // Create a complete bilateral Brain (Left + Right Hemispheres + Cerebellum + Brainstem)
-    const createBilateralBrain = (
-      rawGltfScene: THREE.Group,
-      targetWidth: number = 26,
-      opacity: number = 0.94,
-      wire: boolean = false
-    ): THREE.Group => {
-      const fullBrainGroup = new THREE.Group();
+    // 1. Build Calibrated Full Bilateral Brain
+    const buildBilateralBrain = (rawGltfScene: THREE.Group): THREE.Group => {
+      const brainGroup = new THREE.Group();
 
-      // Calibrate Left Hemisphere
-      const leftHemi = rawGltfScene.clone();
-      leftHemi.rotation.y = Math.PI / 2;
-
-      // Compute bounding box
-      const initialBox = new THREE.Box3().setFromObject(leftHemi);
-      const initialSize = initialBox.getSize(new THREE.Vector3());
-      const maxDim = Math.max(initialSize.x, initialSize.y, initialSize.z) || 1;
-      const hemiScale = (targetWidth * 0.95) / maxDim;
-      leftHemi.scale.set(hemiScale, hemiScale, hemiScale);
-
-      const scaledBox = new THREE.Box3().setFromObject(leftHemi);
-      const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
-      // Center medial edge at X = 0 (shift left hemisphere to negative X)
-      leftHemi.position.x -= (scaledCenter.x + (scaledBox.max.x - scaledCenter.x) * 0.45);
-      leftHemi.position.y -= scaledCenter.y;
-      leftHemi.position.z -= scaledCenter.z;
-
-      // Apply Medical Cyan Shader
-      leftHemi.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          const mesh = child as THREE.Mesh;
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-          if (mesh.geometry) mesh.geometry.computeVertexNormals();
-          mesh.material = new THREE.MeshStandardMaterial({
-            color: BRAIN_COLOR,
-            roughness: 0.35,
-            metalness: 0.15,
-            wireframe: wire,
-            side: THREE.DoubleSide,
-            transparent: opacity < 1.0,
-            opacity: opacity,
-            depthWrite: opacity >= 0.8,
-          });
+      // Extract geometry from loaded scene
+      let extractedGeo: THREE.BufferGeometry | null = null;
+      rawGltfScene.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh && !extractedGeo) {
+          extractedGeo = (child as THREE.Mesh).geometry.clone();
         }
       });
 
-      // Construct Mirrored Right Hemisphere
-      const rightHemi = leftHemi.clone();
-      rightHemi.scale.x = -leftHemi.scale.x;
-      rightHemi.position.x = -leftHemi.position.x;
-      rightHemi.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          const mesh = child as THREE.Mesh;
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-          mesh.material = new THREE.MeshStandardMaterial({
-            color: 0x0ea5e9, // Slightly differentiated right cortex tone
-            roughness: 0.35,
-            metalness: 0.15,
-            wireframe: wire,
-            side: THREE.DoubleSide,
-            transparent: opacity < 1.0,
-            opacity: opacity,
-            depthWrite: opacity >= 0.8,
-          });
-        }
+      const sourceGeometry: THREE.BufferGeometry = extractedGeo || new THREE.SphereGeometry(12, 32, 32);
+
+      // Brain scaling & orientation
+      const targetBrainHeight = 22.0;
+      sourceGeometry.computeBoundingBox();
+      const bBox = sourceGeometry.boundingBox || new THREE.Box3(new THREE.Vector3(-10, -10, -10), new THREE.Vector3(10, 10, 10));
+      const rawHeight = bBox.max.y - bBox.min.y || 1;
+      const scale = targetBrainHeight / rawHeight;
+
+      const brainMaterialLeft = new THREE.MeshStandardMaterial({
+        color: BRAIN_CYAN,
+        roughness: 0.35,
+        metalness: 0.15,
+        wireframe: isWireframe,
+        side: THREE.FrontSide,
+        transparent: false,
+        opacity: 1.0,
       });
 
-      fullBrainGroup.add(leftHemi);
-      fullBrainGroup.add(rightHemi);
+      const brainMaterialRight = new THREE.MeshStandardMaterial({
+        color: 0x0ea5e9,
+        roughness: 0.35,
+        metalness: 0.15,
+        wireframe: isWireframe,
+        side: THREE.FrontSide,
+        transparent: false,
+        opacity: 1.0,
+      });
 
-      // Anatomical Cerebellum (Inferior Posterior)
-      const cerebellumGeo = new THREE.SphereGeometry(6.2, 28, 28);
+      // Left Hemisphere
+      const leftMesh = new THREE.Mesh(sourceGeometry, brainMaterialLeft);
+      leftMesh.rotation.y = Math.PI / 2;
+      leftMesh.scale.set(scale, scale, scale);
+      leftMesh.position.set(-5.5, -targetBrainHeight / 2 + 1.0, 0.5);
+      brainGroup.add(leftMesh);
+
+      // Right Hemisphere (Symmetrical Reflection)
+      const rightGeom = sourceGeometry.clone();
+      const rightMesh = new THREE.Mesh(rightGeom, brainMaterialRight);
+      rightMesh.rotation.y = -Math.PI / 2;
+      rightMesh.scale.set(scale, scale, scale);
+      rightMesh.position.set(5.5, -targetBrainHeight / 2 + 1.0, 0.5);
+      brainGroup.add(rightMesh);
+
+      // Cerebellum & Brainstem
       const cerebellumMat = new THREE.MeshStandardMaterial({
         color: 0x0284c7,
         roughness: 0.4,
         metalness: 0.15,
-        wireframe: wire,
-        side: THREE.DoubleSide,
-        transparent: opacity < 1.0,
-        opacity: opacity,
+        wireframe: isWireframe,
+        side: THREE.FrontSide,
       });
-      const cerebellumLeft = new THREE.Mesh(cerebellumGeo, cerebellumMat);
-      cerebellumLeft.position.set(-3.8, -4.5, -7.5);
-      cerebellumLeft.scale.set(0.9, 0.75, 0.95);
-      fullBrainGroup.add(cerebellumLeft);
+      const cerebellumGeo = new THREE.SphereGeometry(5.0, 24, 24);
+      const cerebellumL = new THREE.Mesh(cerebellumGeo, cerebellumMat);
+      cerebellumL.position.set(-3.6, -7.5, -6.5);
+      cerebellumL.scale.set(0.9, 0.75, 0.95);
+      brainGroup.add(cerebellumL);
 
-      const cerebellumRight = new THREE.Mesh(cerebellumGeo, cerebellumMat);
-      cerebellumRight.position.set(3.8, -4.5, -7.5);
-      cerebellumRight.scale.set(0.9, 0.75, 0.95);
-      fullBrainGroup.add(cerebellumRight);
+      const cerebellumR = new THREE.Mesh(cerebellumGeo, cerebellumMat);
+      cerebellumR.position.set(3.6, -7.5, -6.5);
+      cerebellumR.scale.set(0.9, 0.75, 0.95);
+      brainGroup.add(cerebellumR);
 
-      // Anatomical Brainstem (Inferior Medial)
-      const brainstemGeo = new THREE.CylinderGeometry(2.0, 1.5, 9.5, 20);
       const brainstemMat = new THREE.MeshStandardMaterial({
         color: 0x7dd3fc,
         roughness: 0.45,
         metalness: 0.1,
-        side: THREE.DoubleSide,
-        transparent: opacity < 1.0,
-        opacity: opacity,
+        side: THREE.FrontSide,
       });
+      const brainstemGeo = new THREE.CylinderGeometry(1.8, 1.4, 8.5, 20);
       const brainstem = new THREE.Mesh(brainstemGeo, brainstemMat);
-      brainstem.position.set(0, -8.0, -2.5);
-      fullBrainGroup.add(brainstem);
+      brainstem.position.set(0, -10.5, -2.5);
+      brainGroup.add(brainstem);
 
-      // Align vertical height with the cranial vault
-      fullBrainGroup.position.set(0, 5.0, 1.0);
-      return fullBrainGroup;
+      // Brain sits centered inside cranial cavity (Y = 0)
+      brainGroup.position.set(0, 0, 0);
+      return brainGroup;
     };
 
-    // Calibrate Cranial Skull Mesh
-    const calibrateSkull = (
+    // 2. Build Calibrated Single Skull (NO Double Rendering)
+    const buildCalibratedSkull = (
       rawSkullScene: THREE.Group,
-      targetDim: number = 46,
-      opacity: number = 0.45,
-      wire: boolean = false
+      isDual: boolean
     ): THREE.Group => {
       const skullGroup = new THREE.Group();
-      const skullModel = rawSkullScene.clone();
 
-      const initialBox = new THREE.Box3().setFromObject(skullModel);
-      const initialSize = initialBox.getSize(new THREE.Vector3());
-      const maxDim = Math.max(initialSize.x, initialSize.y, initialSize.z) || 1;
-
-      const scaleFactor = targetDim / maxDim;
-      skullModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
-
-      const scaledBox = new THREE.Box3().setFromObject(skullModel);
-      const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
-
-      // Center horizontally at X=0, Z=0; position cranial vault around Y=5.0
-      skullModel.position.x -= scaledCenter.x;
-      skullModel.position.y -= (scaledCenter.y - 2.5); // Align cranial cavity with brain
-      skullModel.position.z -= scaledCenter.z;
-
-      skullModel.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          const mesh = child as THREE.Mesh;
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-          if (mesh.geometry) mesh.geometry.computeVertexNormals();
-
-          mesh.material = new THREE.MeshStandardMaterial({
-            color: SKULL_COLOR,
-            roughness: 0.55,
-            metalness: 0.2,
-            wireframe: wire,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: opacity,
-            depthWrite: opacity > 0.85,
-          });
+      let extractedSkullGeo: THREE.BufferGeometry | null = null;
+      rawSkullScene.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh && !extractedSkullGeo) {
+          extractedSkullGeo = (child as THREE.Mesh).geometry.clone();
         }
       });
 
-      skullGroup.add(skullModel);
+      const skullGeo: THREE.BufferGeometry = extractedSkullGeo || new THREE.SphereGeometry(16, 32, 32);
+
+      skullGeo.computeBoundingBox();
+      const bBox = skullGeo.boundingBox || new THREE.Box3(new THREE.Vector3(-10, -10, -10), new THREE.Vector3(10, 10, 10));
+      const totalHeight = bBox.max.y - bBox.min.y || 1;
+      const targetSkullHeight = 44.0;
+      const scale = targetSkullHeight / totalHeight;
+
+      // In Skull Mesh mode: Solid, single FrontSide surface
+      // In Dual mode: Translucent single FrontSide surface (no inner double ghosting)
+      const skullMat = new THREE.MeshStandardMaterial({
+        color: SKULL_BONE,
+        roughness: 0.55,
+        metalness: 0.2,
+        wireframe: isWireframe,
+        side: THREE.FrontSide, // FrontSide ONLY prevents double skull inner ghosting
+        transparent: isDual,
+        opacity: isDual ? 0.32 : 0.92,
+        depthWrite: !isDual,
+      });
+
+      const skullMesh = new THREE.Mesh(skullGeo, skullMat);
+      skullMesh.scale.set(scale, scale, scale);
+
+      // Align cranial vault center with Y = 0 (Brain Center)
+      skullMesh.position.set(0, -22.5, -1.0);
+      skullGroup.add(skullMesh);
+
       return skullGroup;
     };
 
-    // Procedural Fallback Builder (if GLBs fail to load)
-    const buildProceduralFallback = (type: 'brain' | 'skull') => {
-      const group = new THREE.Group();
-      if (type === 'brain') {
-        const leftHemi = new THREE.Mesh(
-          new THREE.SphereGeometry(12, 36, 36),
-          new THREE.MeshStandardMaterial({
-            color: BRAIN_COLOR,
-            roughness: 0.35,
-            metalness: 0.15,
-            side: THREE.DoubleSide,
-            wireframe: isWireframe,
-            transparent: true,
-            opacity: 0.94,
-          })
-        );
-        leftHemi.position.set(-5.5, 5.0, 1.0);
-        leftHemi.scale.set(0.9, 1.05, 1.25);
-        group.add(leftHemi);
-
-        const rightHemi = new THREE.Mesh(
-          new THREE.SphereGeometry(12, 36, 36),
-          new THREE.MeshStandardMaterial({
-            color: 0x0ea5e9,
-            roughness: 0.35,
-            metalness: 0.15,
-            side: THREE.DoubleSide,
-            wireframe: isWireframe,
-            transparent: true,
-            opacity: 0.94,
-          })
-        );
-        rightHemi.position.set(5.5, 5.0, 1.0);
-        rightHemi.scale.set(0.9, 1.05, 1.25);
-        group.add(rightHemi);
-
-        const cerebellum = new THREE.Mesh(
-          new THREE.SphereGeometry(7.0, 28, 28),
-          new THREE.MeshStandardMaterial({
-            color: 0x0284c7,
-            roughness: 0.4,
-            metalness: 0.15,
-            side: THREE.DoubleSide,
-            wireframe: isWireframe,
-          })
-        );
-        cerebellum.position.set(0, -1.0, -7.0);
-        cerebellum.scale.set(1.3, 0.85, 0.95);
-        group.add(cerebellum);
-
-        const brainstem = new THREE.Mesh(
-          new THREE.CylinderGeometry(2.5, 1.8, 10, 24),
-          new THREE.MeshStandardMaterial({
-            color: 0x7dd3fc,
-            roughness: 0.4,
-            side: THREE.DoubleSide,
-          })
-        );
-        brainstem.position.set(0, -4.5, -2.5);
-        group.add(brainstem);
-      } else {
-        const cranium = new THREE.Mesh(
-          new THREE.SphereGeometry(17, 40, 40),
-          new THREE.MeshStandardMaterial({
-            color: SKULL_COLOR,
-            roughness: 0.55,
-            metalness: 0.2,
-            side: THREE.DoubleSide,
-            wireframe: isWireframe,
-            transparent: true,
-            opacity: 0.45,
-          })
-        );
-        cranium.scale.set(1.05, 1.2, 1.3);
-        cranium.position.set(0, 4.0, 0);
-        group.add(cranium);
-      }
-      return group;
-    };
-
+    // Load Appropriate Model Mode
     if (modelType === 'dual') {
       let loadedCount = 0;
       const checkDone = () => {
@@ -406,70 +303,53 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       gltfLoader.load(
         '/models/brain.glb',
         (gltf) => {
-          const bilateralBrain = createBilateralBrain(gltf.scene, 27, 0.94, isWireframe);
-          modelsGroup.add(bilateralBrain);
+          const brain = buildBilateralBrain(gltf.scene);
+          modelsGroup.add(brain);
           checkDone();
         },
         undefined,
-        () => {
-          const fallbackBrain = buildProceduralFallback('brain');
-          modelsGroup.add(fallbackBrain);
-          checkDone();
-        }
+        () => checkDone()
       );
 
       gltfLoader.load(
         '/models/skull.glb',
         (gltf) => {
-          // Translucent Bone Shell (0.28 opacity) for Craniotomy Dual Overlay
-          const skull = calibrateSkull(gltf.scene, 46, 0.28, isWireframe);
+          const skull = buildCalibratedSkull(gltf.scene, true);
           modelsGroup.add(skull);
           checkDone();
         },
         undefined,
-        () => {
-          const fallbackSkull = buildProceduralFallback('skull');
-          modelsGroup.add(fallbackSkull);
-          checkDone();
-        }
+        () => checkDone()
       );
     } else if (modelType === 'brain') {
       gltfLoader.load(
         '/models/brain.glb',
         (gltf) => {
-          const bilateralBrain = createBilateralBrain(gltf.scene, 28, 0.96, isWireframe);
-          modelsGroup.add(bilateralBrain);
+          const brain = buildBilateralBrain(gltf.scene);
+          modelsGroup.add(brain);
           setModelLoading(false);
         },
         undefined,
-        () => {
-          const fallback = buildProceduralFallback('brain');
-          modelsGroup.add(fallback);
-          setModelLoading(false);
-        }
+        () => setModelLoading(false)
       );
     } else {
-      // Skull Only Mode: Semi-translucent (0.50 opacity) so internal tumor & trajectory are visible
+      // Skull Only Mode
       gltfLoader.load(
         '/models/skull.glb',
         (gltf) => {
-          const skull = calibrateSkull(gltf.scene, 46, 0.50, isWireframe);
+          const skull = buildCalibratedSkull(gltf.scene, false);
           modelsGroup.add(skull);
           setModelLoading(false);
         },
         undefined,
-        () => {
-          const fallback = buildProceduralFallback('skull');
-          modelsGroup.add(fallback);
-          setModelLoading(false);
-        }
+        () => setModelLoading(false)
       );
     }
 
     // Unified 3D Target Tumor
     const targetWorldPos = toWorldVector(activeCase.targetPosition);
 
-    const targetGeo = new THREE.SphereGeometry(3.5, 24, 24);
+    const targetGeo = new THREE.SphereGeometry(3.2, 24, 24);
     const targetMat = new THREE.MeshStandardMaterial({
       color: 0xef4444,
       emissive: 0xd97706,
@@ -479,42 +359,44 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
     });
     const targetMesh = new THREE.Mesh(targetGeo, targetMat);
     targetMesh.position.copy(targetWorldPos);
+    targetMesh.renderOrder = 999;
     targetMeshRef.current = targetMesh;
     scene.add(targetMesh);
 
     // Safety Margin Halo
-    const haloRadius = 3.5 + activeCase.safetyMarginMm * ANATOMICAL_SCALE;
+    const haloRadius = 3.2 + activeCase.safetyMarginMm * SCALE_X;
     const haloGeo = new THREE.SphereGeometry(haloRadius, 20, 20);
     const haloMat = new THREE.MeshBasicMaterial({
       color: 0xfbbf24,
       wireframe: true,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.65,
     });
     const haloMesh = new THREE.Mesh(haloGeo, haloMat);
     haloMesh.position.copy(targetWorldPos);
+    haloMesh.renderOrder = 998;
     scene.add(haloMesh);
 
     // Primary Surgical Probe Tool
     const probeGroup = new THREE.Group();
-    const handleGeo = new THREE.CylinderGeometry(0.9, 0.9, 22, 16);
+    const handleGeo = new THREE.CylinderGeometry(0.8, 0.8, 20, 16);
     const handleMat = new THREE.MeshStandardMaterial({
       color: 0x38bdf8,
       metalness: 0.85,
       roughness: 0.2,
     });
     const handle = new THREE.Mesh(handleGeo, handleMat);
-    handle.position.y = 11;
+    handle.position.y = 10;
     probeGroup.add(handle);
 
-    const tipGeo = new THREE.ConeGeometry(0.9, 6.5, 16);
+    const tipGeo = new THREE.ConeGeometry(0.8, 6.0, 16);
     const tipMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       metalness: 0.95,
       roughness: 0.1,
     });
     const tip = new THREE.Mesh(tipGeo, tipMat);
-    tip.position.y = -3.25;
+    tip.position.y = -3.0;
     tip.rotation.x = Math.PI;
     probeGroup.add(tip);
 
@@ -642,8 +524,8 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
 
   const handleResetCamera = () => {
     if (cameraRef.current && controlsRef.current) {
-      cameraRef.current.position.set(45, 30, 85);
-      controlsRef.current.target.set(0, 4, 0);
+      cameraRef.current.position.set(38, 22, 75);
+      controlsRef.current.target.set(0, 0, 0);
       controlsRef.current.update();
     }
   };
@@ -656,7 +538,7 @@ export const ThreeDScene: React.FC<ThreeDSceneProps> = ({
       {modelLoading && (
         <div className="absolute inset-0 bg-[#0f172a]/80 flex items-center justify-center gap-2.5 text-[#e0f2fe] text-xs font-bold z-20 font-display">
           <Loader2 className="w-5 h-5 animate-spin text-[#38bdf8]" />
-          <span>Calibrating & Aligning 3D Anatomical Meshes...</span>
+          <span>Calibrating 3D Anatomical Alignment...</span>
         </div>
       )}
 
