@@ -1,4 +1,5 @@
 'use client';
+import { SavedSurgicalPlan } from '@/lib/puter/client';
 
 import React, { useState } from 'react';
 import { PRESET_CASES } from '@/data/presetCases';
@@ -56,6 +57,33 @@ export default function Home() {
     activeCase.safetyMarginMm
   );
 
+  const handleLoadPlanFromPuter = (plan: SavedSurgicalPlan) => {
+    const loadedCase: ClinicalCase = {
+      id: plan.caseId || ('cloud_' + plan.id),
+      name: plan.name,
+      patientAge: plan.patientAge,
+      gender: plan.gender,
+      modality: (plan.modality || 'MRI T1-CE / T2-FLAIR') as any,
+      category: 'Cranial Lesion (Cloud Sync)',
+      description: activeCase.description || 'Synchronized stereotactic plan from Puter Cloud',
+      volumeUrl: activeCase.volumeUrl,
+      fiducials: activeCase.fiducials || [],
+      safetyMarginMm: plan.safetyMarginMm,
+      targetPosition: {
+        x: plan.targetCoordinates[0],
+        y: plan.targetCoordinates[1],
+        z: plan.targetCoordinates[2],
+      },
+      entryPosition: {
+        x: plan.entryPort[0],
+        y: plan.entryPort[1],
+        z: plan.entryPort[2],
+      },
+      anatomicalStructures: activeCase.anatomicalStructures,
+    };
+    handleCaseChange(loadedCase);
+  };
+
   const handleCaseChange = (newCase: ClinicalCase) => {
     setActiveCase(newCase);
     setPointerPosition(newCase.entryPosition);
@@ -89,6 +117,7 @@ export default function Home() {
         onTabChange={setActiveTab}
         onOpenRegistration={() => setIsRegistrationOpen(true)}
         onOpenUploadModal={() => setIsUploadScanOpen(true)}
+        onLoadPlanIntoCase={handleLoadPlanFromPuter}
       />
 
       {/* Main Multi-Column Surgical Cockpit Layout */}

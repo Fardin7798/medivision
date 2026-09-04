@@ -1,6 +1,12 @@
 import { puter } from '@heyputer/puter.js';
 import { ClinicalCase, NavigationTelemetry } from '@/types';
 
+export interface PuterUser {
+  username: string;
+  uuid?: string;
+  email?: string;
+}
+
 export interface SavedSurgicalPlan {
   id: string;
   name: string;
@@ -23,6 +29,63 @@ export const PuterClient = {
    */
   isAvailable(): boolean {
     return typeof window !== 'undefined' && typeof puter !== 'undefined';
+  },
+
+  /**
+   * Check if user is currently signed into Puter
+   */
+  isSignedIn(): boolean {
+    if (!this.isAvailable()) return false;
+    try {
+      return Boolean(puter.auth?.isSignedIn?.());
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Get active Puter user profile
+   */
+  async getUser(): Promise<PuterUser | null> {
+    if (!this.isAvailable()) return null;
+    try {
+      if (!this.isSignedIn()) return null;
+      const user = await puter.auth.getUser();
+      if (!user) return null;
+      return {
+        username: user.username || 'Puter Surgeon',
+        uuid: user.uuid,
+      };
+    } catch (err) {
+      console.warn('Failed to retrieve Puter user:', err);
+      return null;
+    }
+  },
+
+  /**
+   * Open Puter 1-click authentication modal
+   */
+  async signIn(): Promise<PuterUser | null> {
+    if (!this.isAvailable()) return null;
+    try {
+      await puter.auth.signIn();
+      return await this.getUser();
+    } catch (err) {
+      console.warn('Puter sign in cancelled or failed:', err);
+      return null;
+    }
+  },
+
+  /**
+   * Sign out of Puter session
+   */
+  async signOut(): Promise<void> {
+    if (!this.isAvailable()) return;
+    try {
+      await puter.auth.signOut();
+    } catch (err) {
+      console.warn('Puter sign out failed:', err);
+    }
   },
 
   /**
@@ -76,15 +139,23 @@ export const PuterClient = {
       if (existingList.length > 15) existingList = existingList.slice(0, 15);
       await puter.kv.set('medivision_saved_plans_index', JSON.stringify(existingList));
 
-      return { success: true, filename, path: `puter:///${filename}` };
+      return {
+        success: true,
+        filename,
+        path: `puter://fs/${filename}`,
+      };
     } catch (err: unknown) {
-      console.error('Error saving plan to Puter cloud:', err);
-      return { success: false, filename: '', error: err instanceof Error ? err.message : 'Cloud save failed' };
+      console.error('Puter cloud plan save error:', err);
+      return {
+        success: false,
+        filename: '',
+        error: err instanceof Error ? err.message : 'Unknown storage error',
+      };
     }
   },
 
   /**
-   * Retrieve list of surgical plans saved in Puter Cloud
+   * Retrieve list of saved plans from Puter KV index
    */
   async getSavedPlansFromCloud(): Promise<SavedSurgicalPlan[]> {
     if (!this.isAvailable()) return [];
@@ -92,9 +163,10 @@ export const PuterClient = {
     try {
       const rawIndex = await puter.kv.get('medivision_saved_plans_index');
       if (!rawIndex) return [];
-      return typeof rawIndex === 'string' ? JSON.parse(rawIndex) : (rawIndex as SavedSurgicalPlan[]);
+      const list = typeof rawIndex === 'string' ? JSON.parse(rawIndex) : rawIndex;
+      return Array.isArray(list) ? list : [];
     } catch (err) {
-      console.warn('Could not read saved plans from Puter KV:', err);
+      console.warn('Failed to retrieve saved plans from Puter KV:', err);
       return [];
     }
   },
@@ -166,7 +238,6 @@ Provide a concise, direct, high-yield clinical neurosurgical response (max 3 sen
         rawText = `Extracted from ${imageFile.name}: Cranial scan study, Age 52, Modality MRI T1-CE with Gadolinium.`;
       }
 
-      // Simple heuristic parsing for patient metadata
       let detectedModality: 'MRI T1-CE' | 'CT Helical' | 'CT Angiography' = 'MRI T1-CE';
       if (rawText.toLowerCase().includes('ct angio') || rawText.toLowerCase().includes('cta')) {
         detectedModality = 'CT Angiography';
@@ -203,27 +274,26 @@ Provide a concise, direct, high-yield clinical neurosurgical response (max 3 sen
     isDualTrajectory: boolean
   ): Promise<string> {
     if (!this.isAvailable()) {
-      return 'AI assessment unavailable: Puter.js is not initialized.';
+      return 'Puter AI is unavailable. Please ensure internet access is active.';
     }
 
     const clinicalPrompt = `
-You are an expert neurosurgical and image-guided surgery planning assistant.
-Analyze this surgical navigation scenario and provide a concise, professional 3-bullet clinical report:
-
-Case: ${activeCase.name}
+You are an expert surgical AI copilot assisting a neurosurgeon.
+Analyze the following patient surgical case and navigation state:
+Case Name: ${activeCase.name}
 Modality: ${activeCase.modality}
-Patient: ${activeCase.patientAge} years old, ${activeCase.gender}
-Target Position (DICOM RAS mm): [X: ${activeCase.targetPosition.x}, Y: ${activeCase.targetPosition.y}, Z: ${activeCase.targetPosition.z}]
-Planned Entry Port (RAS mm): [X: ${activeCase.entryPosition.x}, Y: ${activeCase.entryPosition.y}, Z: ${activeCase.entryPosition.z}]
-Planned Safety Margin: ${activeCase.safetyMarginMm} mm
-Current Optical Probe Distance: ${telemetry.distanceMm.toFixed(1)} mm
-Registration Error (TRE): < 1.32 mm (IEC 60601-2-77 Compliant)
-Dual Trajectory: ${isDualTrajectory ? 'Enabled' : 'Single Corridor'}
+Category: ${activeCase.category}
+Target Position (RAS mm): [${activeCase.targetPosition.x}, ${activeCase.targetPosition.y}, ${activeCase.targetPosition.z}]
+Entry Port (RAS mm): [${activeCase.entryPosition.x}, ${activeCase.entryPosition.y}, ${activeCase.entryPosition.z}]
+Safety Margin: ${activeCase.safetyMarginMm} mm
+Current Probe Distance to Target: ${telemetry.distanceMm.toFixed(1)} mm
+Target Registration Error (TRE): 1.12 mm
+Dual Trajectory Enabled: ${isDualTrajectory}
 
 Format your response strictly as:
-1. ANATOMICAL TARGET & RESECTION CORRIDOR: (1-2 sentences on approach vector and trajectory angle)
-2. ELOQUENT CORTEX & CRITICAL VESSEL RISKS: (1-2 sentences on critical structures to preserve within the ${activeCase.safetyMarginMm}mm margin)
-3. SURGICAL CLEARANCE RECOMMENDATION: (Clear GO / CAUTION verdict based on current distance of ${telemetry.distanceMm.toFixed(1)}mm and TRE clearance)
+1. ANATOMICAL TARGET & RESECTION CORRIDOR (1-2 sentences)
+2. ELOQUENT CORTEX & CRITICAL VESSEL RISKS (1-2 sentences)
+3. SURGICAL CLEARANCE RECOMMENDATION (1 sentence: state whether alignment is VERIFIED GO or CAUTION)
 `;
 
     try {
@@ -259,7 +329,6 @@ Format your response strictly as:
       console.warn('Puter TTS failed, falling back to browser SpeechSynthesis:', err);
     }
 
-    // Fallback: Browser Web Speech API
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ClinicalCase } from '@/types';
 import { PRESET_CASES } from '@/data/presetCases';
 import {
@@ -13,8 +13,11 @@ import {
   Upload,
   CheckCircle2,
   Stethoscope,
-  Shield
+  Shield,
+  Cloud
 } from 'lucide-react';
+import { PuterClient, PuterUser, SavedSurgicalPlan } from '@/lib/puter/client';
+import { PuterCloudModal } from './PuterCloudModal';
 
 interface NavbarProps {
   activeCase: ClinicalCase;
@@ -23,6 +26,7 @@ interface NavbarProps {
   onTabChange: (tab: 'navigation' | 'mpr' | 'ai' | 'layers') => void;
   onOpenRegistration: () => void;
   onOpenUploadModal: () => void;
+  onLoadPlanIntoCase?: (plan: SavedSurgicalPlan) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -32,12 +36,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   onTabChange,
   onOpenRegistration,
   onOpenUploadModal,
+  onLoadPlanIntoCase,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isPuterModalOpen, setIsPuterModalOpen] = useState(false);
+  const [puterUser, setPuterUser] = useState<PuterUser | null>(null);
+
+  useEffect(() => {
+    PuterClient.getUser()
+      .then((user) => setPuterUser(user))
+      .catch(() => {});
+  }, [isPuterModalOpen]);
 
   return (
     <header className="sticky top-0 z-40 bg-[#FEF9E1] border-b border-[#E9EDCA] shadow-xs">
-      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
+      <div className="max-w-[1920px] mx-auto px-3 sm:px-6 py-2.5 flex items-center justify-between gap-3">
         
         {/* Left: Brand & Clinical OR Suite Status */}
         <div className="flex items-center gap-3">
@@ -113,12 +126,27 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </nav>
 
-        {/* Right: Actions, Case Dropdown, and Calibration */}
+        {/* Right: Actions, Puter Cloud Identity, Case Dropdown, Calibration */}
         <div className="flex items-center gap-2 overflow-x-auto">
+          
+          {/* Puter.js Cloud Ecosystem & Identity Button */}
+          <button
+            onClick={() => setIsPuterModalOpen(true)}
+            className="flex items-center gap-1.5 bg-[#FAEDCD] hover:bg-[#f3e1b7] text-[#63431f] border border-[#D3A373]/60 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs whitespace-nowrap cursor-pointer"
+            title="Puter Cloud Ecosystem & Account"
+          >
+            <Cloud className="w-3.5 h-3.5 text-[#D3A373]" />
+            <span className="font-display font-black text-[#2e2417]">Puter Cloud</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${puterUser ? 'bg-[#556b2f] animate-pulse' : 'bg-[#D3A373]'}`} />
+            <span className="text-[10px] font-mono text-[#784819] hidden md:inline">
+              {puterUser ? `@${puterUser.username}` : 'Guest'}
+            </span>
+          </button>
+
           {/* Custom Scan Import */}
           <button
             onClick={onOpenUploadModal}
-            className="flex items-center gap-1.5 bg-[#E9EDCA] hover:bg-[#dce2b6] text-[#3e4c1f] border border-[#CDD5AE] px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs whitespace-nowrap"
+            className="flex items-center gap-1.5 bg-[#E9EDCA] hover:bg-[#dce2b6] text-[#3e4c1f] border border-[#CDD5AE] px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs whitespace-nowrap"
           >
             <Upload className="w-3.5 h-3.5 text-[#54682b]" />
             <span>Import Scan</span>
@@ -128,14 +156,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="relative">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-2.5 bg-white hover:bg-[#FAEDCD]/50 text-[#2e2417] border border-[#E9EDCA] px-3 py-1.5 rounded-xl text-xs transition-all shadow-xs whitespace-nowrap"
+              className="flex items-center gap-2 bg-white hover:bg-[#FAEDCD]/50 text-[#2e2417] border border-[#E9EDCA] px-3 py-1.5 rounded-xl text-xs transition-all shadow-xs whitespace-nowrap"
             >
               <Stethoscope className="w-3.5 h-3.5 text-[#D3A373]" />
               <div className="text-left">
                 <span className="text-[9px] text-[#7d6b56] block font-mono uppercase tracking-wider font-semibold">
                   CASE SCENARIO
                 </span>
-                <span className="font-bold text-[#2e2417] text-xs max-w-[130px] sm:max-w-[180px] truncate block font-display">
+                <span className="font-bold text-[#2e2417] text-xs max-w-[120px] sm:max-w-[170px] truncate block font-display">
                   {activeCase.name}
                 </span>
               </div>
@@ -188,7 +216,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* OR Calibration Modal Trigger */}
           <button
             onClick={onOpenRegistration}
-            className="flex items-center gap-1.5 bg-[#FAEDCD] hover:bg-[#f3e1b7] text-[#63431f] border border-[#D3A373]/50 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs whitespace-nowrap"
+            className="flex items-center gap-1.5 bg-[#FAEDCD] hover:bg-[#f3e1b7] text-[#63431f] border border-[#D3A373]/50 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs whitespace-nowrap"
           >
             <Shield className="w-3.5 h-3.5 text-[#D3A373]" />
             <span className="hidden sm:inline">OR Calibration</span>
@@ -196,6 +224,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
       </div>
+
+      {/* Puter Cloud & Identity Suite Modal */}
+      <PuterCloudModal
+        isOpen={isPuterModalOpen}
+        onClose={() => {
+          setIsPuterModalOpen(false);
+          PuterClient.getUser().then((u) => setPuterUser(u)).catch(() => {});
+        }}
+        onLoadPlanIntoCase={onLoadPlanIntoCase}
+      />
     </header>
   );
 };
