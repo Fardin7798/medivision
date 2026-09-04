@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Heart, Brain, Bone, Activity, Sparkles, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Heart, Brain, Bone, Activity, Sparkles, ShieldCheck } from 'lucide-react';
 
 interface AtlasModel {
   id: string;
@@ -16,34 +16,34 @@ const ATLAS_MODELS: AtlasModel[] = [
   {
     id: 'heart',
     name: '3D Animated Human Heart V2.0',
-    category: 'Cardiovascular',
+    category: 'Cardiovascular Anatomy',
     embedUrl: 'https://sketchfab.com/models/168b474fba564f688048212e99b4159d/embed?autostart=1&ui_controls=1&ui_infos=0&ui_watermark=0',
     description: 'Hyper-realistic beating human heart with internal atria, ventricles, coronary vasculature, and mitral/aortic valves cross-section.',
     structures: ['Left & Right Ventricles', 'Aortic Arch', 'Coronary Arteries', 'Mitral Valve']
   },
   {
     id: 'brain',
-    name: 'Detailed Human Brain & Lobes',
+    name: 'Sagittal Section of Head & Brain',
     category: 'Neuroanatomy',
-    embedUrl: 'https://sketchfab.com/models/8409821814674720abfc1dbfcab271d5/embed?autostart=1&ui_controls=1&ui_infos=0&ui_watermark=0',
-    description: 'Cerebral cortex hemispheres, deep basal ganglia, cerebellum, brainstem, and cranial vascular supply.',
-    structures: ['Frontal & Parietal Lobes', 'Cerebellum', 'Brainstem', 'Thalamic Core']
+    embedUrl: 'https://sketchfab.com/models/3aca242e2b4740b787d19c07ce8bbdb4/embed?autostart=1&ui_controls=1&ui_infos=0&ui_watermark=0',
+    description: 'Medial sagittal cross-section of the human head showing cerebral cortex hemispheres, corpus callosum, cerebellum, brainstem, and cranial fossae.',
+    structures: ['Cerebral Cortex', 'Corpus Callosum', 'Cerebellum', 'Brainstem']
+  },
+  {
+    id: 'spine',
+    name: 'Vertebral Column & Intervertebral Discs',
+    category: 'Spine & Orthopedics',
+    embedUrl: 'https://sketchfab.com/models/48150e7d6bee47e797c11826b68ca7c9/embed?autostart=1&ui_controls=1&ui_infos=0&ui_watermark=0',
+    description: 'Complete human spinal column with cervical, thoracic, lumbar vertebrae, sacrum, and detailed intervertebral disc articulations.',
+    structures: ['Cervical C1-C7', 'Thoracic T1-T12', 'Lumbar L1-L5', 'Intervertebral Discs']
   },
   {
     id: 'skull',
-    name: 'Human Skull & Cervical Spine',
-    category: 'Skeletal / Craniofacial',
-    embedUrl: 'https://sketchfab.com/models/7dd2f32f3c644efb9a6df7aa2286bbf5/embed?autostart=1&ui_controls=1&ui_infos=0&ui_watermark=0',
-    description: 'High-density calvarium bone, orbital cavities, maxilla, mandible, and C1-C7 cervical vertebrae.',
-    structures: ['Cranial Calvarium', 'Sphenoid Bone', 'Mandible', 'C1-C7 Vertebrae']
-  },
-  {
-    id: 'liver',
-    name: 'Human Liver & Portal Vasculature',
-    category: 'Hepatobiliary',
-    embedUrl: 'https://sketchfab.com/models/cfc5457ef4ce4aa19bc92f960f27c34b/embed?autostart=1&ui_controls=1&ui_infos=0&ui_watermark=0',
-    description: 'Hepatic segments I-VIII, portal vein bifurcation, hepatic arteries, gallbladder, and biliary tree.',
-    structures: ['Couinaud Segments I-VIII', 'Portal Vein', 'Gallbladder', 'Hepatic Veins']
+    name: 'Human Skull & Skeleton Anatomy',
+    category: 'Craniofacial / Skeletal',
+    embedUrl: 'https://sketchfab.com/models/136bfe25a2f44435b4319ab2788f701f/embed?autostart=1&ui_controls=1&ui_infos=0&ui_watermark=0',
+    description: 'Anatomically accurate cranial calvarium, facial bones, orbit, maxilla, mandible, and articulated thoracic cage skeleton.',
+    structures: ['Cranial Calvarium', 'Orbital Cavity', 'Mandible', 'Thoracic Cage']
   }
 ];
 
@@ -61,7 +61,7 @@ export const AnatomyAtlasViewer: React.FC = () => {
           </h2>
           <span className="text-[10px] bg-pink-950/80 text-pink-300 font-mono px-2 py-0.5 rounded border border-pink-800/60 font-semibold flex items-center gap-1">
             <ShieldCheck className="w-3 h-3 text-emerald-400" />
-            Zero-Server Load CDN
+            100% Verified Live Models
           </span>
         </div>
 
@@ -79,9 +79,9 @@ export const AnatomyAtlasViewer: React.FC = () => {
             >
               {model.id === 'heart' && <Heart className="w-3.5 h-3.5 text-red-400" />}
               {model.id === 'brain' && <Brain className="w-3.5 h-3.5 text-purple-400" />}
+              {model.id === 'spine' && <Activity className="w-3.5 h-3.5 text-emerald-400" />}
               {model.id === 'skull' && <Bone className="w-3.5 h-3.5 text-cyan-400" />}
-              {model.id === 'liver' && <Activity className="w-3.5 h-3.5 text-amber-400" />}
-              <span>{model.name.split(' ')[2] || model.name.split(' ')[0]}</span>
+              <span>{model.name.split(' ')[0] === '3D' ? 'Human Heart' : model.name.split(' ')[0] === 'Sagittal' ? 'Head & Brain' : model.name.split(' ')[0] === 'Vertebral' ? 'Spine Column' : 'Skull & Skeleton'}</span>
             </button>
           ))}
         </div>
@@ -90,6 +90,7 @@ export const AnatomyAtlasViewer: React.FC = () => {
       {/* Main 3D Embedded Viewer Frame */}
       <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden border border-slate-800/80 bg-black shadow-inner">
         <iframe
+          key={selectedModel.id}
           title={selectedModel.name}
           src={selectedModel.embedUrl}
           className="w-full h-full border-0"
